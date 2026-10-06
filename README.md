@@ -4,8 +4,8 @@ Un parcours gratuit, en français simple, pour apprendre à **piloter l'IA et v�
 comprendre le front-end, le back-end et la sécurité juste assez pour relire, challenger et valider ce que l'IA
 produit.
 
-4 modules, 20 leçons. Chaque leçon : l'idée, un exemple concret, une vidéo, comment vérifier le travail de l'IA,
-un résumé, trois exercices pratiques et un quiz. La progression est enregistrée dans ton navigateur.
+4 modules, 20 leçons. Chaque leçon : l'idée, un exemple concret, comment vérifier le travail de l'IA, un résumé,
+, trois exercices pratiques et un quiz. La progression est enregistrée dans ton navigateur.
 
 ## Lancer le site en local
 
@@ -17,12 +17,6 @@ Aucune installation nécessaire.
    ```
 2. Ouvre `index.html` en double-cliquant dessus. C'est tout.
 
-> Les vidéos YouTube peuvent refuser de se lancer quand la page est ouverte en `file://`. Un lien « Regarder sur
-> YouTube » est toujours proposé en dessous. Pour un rendu identique à la version en ligne, lance un petit serveur
-> local depuis le dossier du projet, puis ouvre http://localhost:8000 :
-> ```bash
-> python -m http.server 8000
-> ```
 
 ## Publier sur GitHub Pages
 
@@ -56,26 +50,7 @@ exercices/            Fichiers de départ des exercices
 assets/programme.js   L'ordre des modules et des leçons
 assets/app.js         Toute la logique du site
 assets/style.css      Le design
-video/                Fabrication des vidéos (Remotion + edge-tts), pas utilisé par le site
 ```
-
-## Vidéos
-
-Les vidéos sont fabriquées dans `video/` puis hébergées sur YouTube en « non répertorié ». Les fichiers MP4 ne sont
-jamais commités (trop lourds). Tout est gratuit : la voix vient de edge-tts, sans compte ni clé. Il faut Node.js et
-Python.
-
-```bash
-cd video
-npm install                               # une seule fois
-python -m pip install edge-tts            # une seule fois
-npm run tts -- m1-01 --essai              # voir le texte envoyé à la voix (gratuit)
-npm run tts -- m1-01 --scene 1            # générer l'audio d'une scène
-npm run studio                            # prévisualiser la vidéo dans le navigateur
-npm run rendu -- m1-01 out/m1-01.mp4      # fabriquer le MP4
-```
-
-Écris le script dans `video/scripts/<id>.md` et corrige les prononciations dans `video/prononciation.json`.
 
 ## Crédits
 

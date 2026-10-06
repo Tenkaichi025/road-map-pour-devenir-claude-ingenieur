@@ -153,36 +153,6 @@ function lecon() {
     dessinerRail();
   }
 
-  // Vidéo : affichée si data-youtube contient un identifiant, sinon message.
-  const video = document.querySelector(".video");
-  if (video) {
-    const yt = video.dataset.youtube;
-    if (yt) {
-      video.replaceChildren(
-        el("iframe", {
-          src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(yt)}`,
-          title: "Vidéo de la leçon",
-          allow: "encrypted-media; picture-in-picture; fullscreen",
-          referrerpolicy: "strict-origin-when-cross-origin",
-          loading: "lazy",
-        }),
-        el(
-          "a",
-          { class: "video-secours", href: `https://www.youtube.com/watch?v=${encodeURIComponent(yt)}` },
-          "La vidéo ne se lance pas ? Regarde-la sur YouTube"
-        )
-      );
-    } else {
-      video.replaceChildren(
-        el(
-          "p",
-          { class: "video-absente" },
-          "La vidéo de cette leçon arrive bientôt. Tout ce qu'il faut savoir est déjà dans le texte."
-        )
-      );
-    }
-  }
-
   // Quiz : <fieldset class="question" data-reponse="N">, N = position de la bonne réponse (à partir de 1).
   document.querySelectorAll(".question").forEach((q) => {
     q.addEventListener("change", (e) => {

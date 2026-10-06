@@ -489,27 +489,6 @@ progress::-moz-progress-bar {
   color: var(--laterite);
 }
 
-/* Vidéo */
-.video iframe {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border: 0;
-  background: var(--code-fond);
-}
-.video-secours {
-  display: inline-block;
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-}
-.video-absente {
-  margin: 0;
-  padding: 1rem 1.25rem;
-  border: 1px dashed var(--gris);
-  color: var(--gris);
-  font-style: italic;
-}
-
 /* Exercices */
 .exercice + .exercice {
   margin-top: 2.5rem;

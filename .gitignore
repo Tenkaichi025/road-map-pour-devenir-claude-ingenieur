@@ -1,10 +1,2 @@
 # Secrets : ne jamais versionner
 .env
-
-# Outillage vidéo
-node_modules/
-video/out/
-*.mp4
-
-# Audio généré (se régénère avec npm run tts)
-video/public/audio/

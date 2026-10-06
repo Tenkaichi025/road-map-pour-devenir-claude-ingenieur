@@ -71,4 +71,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   mémoire, cookie HttpOnly/SameSite=Lax, garde `exigerConnexion`, page web) et `espace-bugge` (port 3007 : mots de
   passe en clair, cookie = e-mail, route admin sans garde, messages qui révèlent les comptes).
   **Module 2 terminé.**
-- Ensuite : module 3 (sécurité).
+- Module 3 en cours : leçon 3.1 (injection SQL : auditer ses requêtes), orientée audit et défense, sans techniques
+  d'attaque avancées. `exercices/m3-01/` : boutique vulnérable (port 3008 : recherche, filtre IN, tri ORDER BY,
+  erreurs SQL renvoyées au client), `boutique/verifier.js` (11 tests défensifs : 4/11 sur la version fournie,
+  11/11 sur la version corrigée), `outils/audit-sql.js` (premier tri ; rate volontairement la ligne LIKE).
+- Ensuite : leçon 3.2 (XSS).

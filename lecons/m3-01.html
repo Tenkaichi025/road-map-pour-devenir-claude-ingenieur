@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Injection SQL : auditer ses requêtes · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m3-01">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 3.1</p>
+          <h1>Injection SQL : auditer ses requêtes</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            En 2.3, tu as vu la règle de base : une valeur venue de l'extérieur ne se colle jamais dans le texte SQL,
+            elle passe par un <code>?</code>. Cette leçon t'apprend à <strong>auditer</strong> un projet entier : trouver
+            toutes les requêtes construites à la main, et décider pour chacune si elle est sûre.
+          </p>
+          <p>
+            Car l'injection ne se cache pas seulement dans les recherches. Elle se glisse aussi dans le
+            <strong>tri</strong> (« trier par prix »), les <strong>filtres à plusieurs choix</strong> (« pagnes et
+            bijoux ») et les <strong>messages d'erreur</strong> trop bavards. Le tri a une particularité : un
+            <code>?</code> ne peut remplacer qu'une <em>valeur</em>, jamais un <em>nom de colonne</em>. Il faut donc
+            un autre outil : la <strong>liste blanche</strong>.
+          </p>
+          <p>
+            Retiens les trois réponses possibles : une valeur → un <code>?</code>. Une liste de valeurs → autant de
+            <code>?</code> que de valeurs. Un nom de colonne ou un sens de tri → une liste blanche, et tout le reste est
+            refusé.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Le catalogue d'une boutique de pagnes et de bijoux à Treichville. Les clients peuvent chercher un produit,
+            filtrer par catégories et trier par prix. Certains produits ne sont pas encore en vente : ils ne doivent
+            jamais apparaître. Voici le code écrit par une IA pressée :
+          </p>
+          <pre><code>// GET /api/produits?q=pagne&amp;categories=pagnes,bijoux&amp;tri=prix&amp;ordre=desc
+let requete = "SELECT id, nom, categorie, prix FROM produits WHERE visible = 1";
+if (q) requete += ` AND nom LIKE '%${q}%'`;
+if (categories) requete += ` AND categorie IN ('${categories.split(",").join("', '")}')`;
+if (tri) requete += ` ORDER BY ${tri} ${ordre || "ASC"}`;
+return repondre(res, 200, db.prepare(requete).all());
+
+// ...et en cas d'erreur, « pour déboguer plus facilement » :
+repondre(res, 500, { erreur: erreur.message, details: String(erreur) });</code></pre>
+          <p>Quatre problèmes, chacun d'une famille différente :</p>
+          <ul>
+            <li><strong>La recherche</strong> colle <code>q</code> dans le SQL : c'est le cas vu en 2.3. Une simple apostrophe (« Boucles d'oreilles ») provoque une erreur, et le texte de la recherche peut modifier la requête.</li>
+            <li><strong>Le filtre</strong> colle chaque catégorie entre apostrophes : même problème, caché dans une liste.</li>
+            <li><strong>Le tri</strong> colle <code>tri</code> et <code>ordre</code> tels quels : n'importe quel texte devient du SQL.</li>
+            <li>
+              <strong>L'erreur</strong> renvoie le message de la base au visiteur. Par exemple
+              <code>no such column: couleur</code> ou <code>near "au": syntax error</code>. Ces messages décrivent la
+              structure de ta base à quiconque les provoque.
+            </li>
+          </ul>
+
+          <h3>La version corrigée</h3>
+          <pre><code>const TRIS = { nom: "nom", prix: "prix", categorie: "categorie" };   // liste blanche
+const ORDRES = { asc: "ASC", desc: "DESC" };
+
+const conditions = ["visible = 1"];
+const valeurs = [];
+if (q) {
+  conditions.push("nom LIKE ?");                                  // 1. une valeur → un ?
+  valeurs.push(`%${q}%`);
+}
+if (categories) {
+  const liste = categories.split(",").filter(Boolean);
+  conditions.push(`categorie IN (${liste.map(() =&gt; "?").join(", ")})`);   // 2. une liste → autant de ?
+  valeurs.push(...liste);
+}
+let requete = `SELECT id, nom, categorie, prix FROM produits WHERE ${conditions.join(" AND ")}`;
+if (tri) {
+  if (!TRIS[tri] || (ordre &amp;&amp; !ORDRES[ordre])) {                       // 3. un nom → liste blanche
+    return repondre(res, 400, { erreur: "Tri non autorisé." });
+  }
+  requete += ` ORDER BY ${TRIS[tri]} ${ORDRES[ordre] || "ASC"}`;
+}
+return repondre(res, 200, db.prepare(requete).all(...valeurs));
+
+// En cas d'erreur : le détail dans le terminal du serveur, un message neutre pour le visiteur.
+console.error(erreur);
+repondre(res, 500, { erreur: "Erreur interne. Réessaie plus tard." });</code></pre>
+          <p>
+            Remarque : la version corrigée contient encore des <code>${…}</code> dans le SQL. Ce n'est pas un problème,
+            car ce qu'ils insèrent vient <strong>de ton code</strong> (des <code>?</code>, ou un nom tiré de
+            <code>TRIS</code>), jamais du visiteur. Un audit ne cherche pas des <code>${</code> : il cherche
+            <strong>d'où vient</strong> chaque morceau inséré.
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 292" role="img" aria-labelledby="schema-31-titre schema-31-desc">
+              <title id="schema-31-titre">Que faire de chaque partie variable d'une requête SQL</title>
+              <desc id="schema-31-desc">
+                Pour chaque partie d'une requête qui dépend du visiteur, trois cas. Une valeur, comme un texte ou un
+                nombre : un point d'interrogation. Une liste de valeurs : autant de points d'interrogation que de
+                valeurs. Un nom de colonne ou un sens de tri : une liste blanche. Tout ce qui n'est pas dans la liste
+                est refusé avec le code 400. Jamais de nettoyage maison du texte.
+              </desc>
+              <defs>
+                <marker id="fleche-31" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-laterite" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <rect class="s-cadre" x="40" y="1" width="240" height="40" />
+              <text class="s-ui" x="160" y="26" text-anchor="middle">Une partie dépend du visiteur ?</text>
+
+              <path class="s-lien" d="M160 42 V58 H52 V72" marker-end="url(#fleche-31)" />
+              <path class="s-lien" d="M160 42 V72" marker-end="url(#fleche-31)" />
+              <path class="s-lien" d="M160 42 V58 H268 V72" marker-end="url(#fleche-31)" />
+
+              <text class="s-note" x="52" y="92" text-anchor="middle">une valeur</text>
+              <text class="s-note" x="160" y="92" text-anchor="middle">une liste</text>
+              <text class="s-note" x="268" y="92" text-anchor="middle">un nom, ASC/DESC</text>
+
+              <rect class="s-boite-contenu" x="1" y="102" width="102" height="54" />
+              <text class="s-code s-code-laterite" x="52" y="126" text-anchor="middle">nom LIKE ?</text>
+              <text class="s-note" x="52" y="146" text-anchor="middle">.all(valeur)</text>
+
+              <rect class="s-boite-contenu" x="109" y="102" width="102" height="54" />
+              <text class="s-code s-code-laterite" x="160" y="126" text-anchor="middle">IN (?, ?, ?)</text>
+              <text class="s-note" x="160" y="146" text-anchor="middle">un ? par valeur</text>
+
+              <rect class="s-boite-contenu" x="217" y="102" width="102" height="54" />
+              <text class="s-code s-code-laterite" x="268" y="126" text-anchor="middle">TRIS[tri]</text>
+              <text class="s-note" x="268" y="146" text-anchor="middle">liste blanche</text>
+
+              <text class="s-note" x="52" y="176" text-anchor="middle">« d'oreilles »</text>
+              <text class="s-note" x="52" y="190" text-anchor="middle">reste du texte</text>
+              <text class="s-note" x="160" y="176" text-anchor="middle">pagnes, bijoux</text>
+              <text class="s-note" x="160" y="190" text-anchor="middle">→ 2 valeurs, 2 ?</text>
+              <text class="s-note" x="268" y="176" text-anchor="middle">hors de la liste ?</text>
+              <text class="s-note s-note-laterite" x="268" y="190" text-anchor="middle">→ 400, refusé</text>
+
+              <g class="s-filet"><line x1="0" y1="210" x2="320" y2="210" /></g>
+              <text class="s-ui-laterite" x="0" y="234">Jamais</text>
+              <text class="s-note" x="0" y="254">de « nettoyage » maison : retirer les apostrophes,</text>
+              <text class="s-note" x="0" y="270">interdire des mots… Ça se contourne, et ça casse</text>
+              <text class="s-note" x="0" y="284">les noms légitimes comme « Boucles d'oreilles ».</text>
+            </svg>
+            <figcaption>
+              Chaque partie variable d'une requête tombe dans une de ces trois cases. Si tu ne sais pas dans laquelle,
+              c'est que la requête est à revoir.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>La méthode d'audit, à appliquer à tout code qui parle à une base :</p>
+          <ul class="liste-verif">
+            <li>Liste <strong>toutes</strong> les requêtes construites avec une variable : <code>${…}</code>, <code>+</code>, <code>+=</code>, sur une ou plusieurs lignes. Un outil aide au premier tri, mais il en rate.</li>
+            <li>Pour chaque morceau inséré, demande-toi <strong>d'où il vient</strong> : du visiteur (adresse, formulaire, JSON, cookie) ou de ton code ?</li>
+            <li>Chaque valeur passe par un <code>?</code>. Une liste <code>IN</code> génère autant de <code>?</code> que de valeurs.</li>
+            <li>Les noms de colonnes, <code>ASC</code>/<code>DESC</code> et les noms de tables passent par une liste blanche. Une valeur hors de la liste donne 400, jamais 500.</li>
+            <li>
+              Refuse les « nettoyages » maison (<code>.replace(/'/g, "''")</code>, une liste de mots interdits) : ils se
+              contournent, et ils cassent les données normales.
+            </li>
+            <li>Les erreurs : un message neutre pour le visiteur, le détail dans les journaux du serveur. Jamais <code>erreur.message</code> dans la réponse.</li>
+            <li>
+              Avec un outil qui écrit le SQL à ta place (un ORM comme Prisma, Sequelize ou Knex), cherche les fonctions
+              « brutes » : <code>$queryRawUnsafe</code>, <code>sequelize.query(…)</code>, <code>knex.raw(…)</code>.
+              Elles demandent les mêmes précautions.
+            </li>
+            <li>Même un id déjà vérifié par une expression régulière passe par un <code>?</code> : il suffit d'une modification de la regex pour rouvrir la faille.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Une valeur → un <code>?</code>. Une liste → autant de <code>?</code>. Un nom de colonne → une liste blanche.</li>
+            <li>Un audit ne cherche pas des <code>${</code> : il cherche d'où vient chaque morceau inséré dans le SQL.</li>
+            <li>Les outils d'audit trient, mais ils ratent des lignes et en signalent d'autres à tort. La relecture reste obligatoire.</li>
+            <li>Jamais de nettoyage maison du texte : ça se contourne et ça casse les vraies données.</li>
+            <li>Une erreur SQL ne sort jamais du serveur : message neutre pour le visiteur, détail dans les journaux.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans <code>exercices/m3-01/</code>. La boutique se lance avec <code>node serveur.js</code>
+            (port <strong>3008</strong>). Deux outils t'aident :
+          </p>
+          <ul>
+            <li><code>node verifier.js</code> (dans <code>boutique</code>) teste 11 comportements d'une boutique sûre.</li>
+            <li><code>node audit-sql.js &lt;dossier&gt;</code> (dans <code>outils</code>) liste les lignes SQL suspectes de n'importe quel projet.</li>
+          </ul>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Auditer la boutique</h3>
+            <ol>
+              <li>Dans <code>exercices/m3-01/boutique</code>, lance <code>node serveur.js</code>. Dans un deuxième terminal, au même endroit, lance <code>node verifier.js</code>. Note les tests en échec.</li>
+              <li>Provoque une erreur, et lis ce que la boutique répond :</li>
+            </ol>
+            <pre><code>curl.exe -s "http://localhost:3008/api/produits?tri=couleur"</code></pre>
+            <ol start="3">
+              <li>Depuis <code>exercices/m3-01/outils</code>, lance l'outil d'audit sur la boutique : <code>node audit-sql.js ../boutique</code>.</li>
+              <li>
+                Ouvre <code>boutique/serveur.js</code> et trouve <strong>toi-même</strong> toutes les lignes qui
+                insèrent une variable dans du SQL. Pour chacune, note : d'où vient la variable, et dans quelle case du
+                schéma elle tombe (valeur, liste, nom).
+              </li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 7 tests en échec, une réponse d'erreur qui révèle la requête, et un
+              tableau de classement des lignes dangereuses, plus complet que celui de l'outil.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Compte les lignes trouvées par l'outil, puis celles que tu as trouvées toi-même. Est-ce le même nombre ? Si non, pourquoi l'outil en a-t-il raté ?</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <div class="tableau">
+                <table>
+                  <thead><tr><th>Ligne</th><th>Variable</th><th>Vient de</th><th>Case</th></tr></thead>
+                  <tbody>
+                    <tr><td>48</td><td><code>q</code></td><td>l'adresse (visiteur)</td><td>une valeur → <code>?</code></td></tr>
+                    <tr><td>49</td><td><code>categories</code></td><td>l'adresse (visiteur)</td><td>une liste → autant de <code>?</code></td></tr>
+                    <tr><td>50</td><td><code>tri</code>, <code>ordre</code></td><td>l'adresse (visiteur)</td><td>des noms → liste blanche</td></tr>
+                    <tr><td>57</td><td>l'id</td><td>l'adresse, filtrée par <code>\d+</code></td><td>une valeur → <code>?</code> (pas exploitable aujourd'hui, mais fragile)</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                <strong>L'outil n'a trouvé que 3 lignes sur 4.</strong> Il a raté la ligne 48, la recherche. Elle ne
+                contient aucun des mots qu'il cherche, comme <code>SELECT</code> ou <code>WHERE</code>, seulement
+                <code>AND nom LIKE</code>. C'est la leçon la plus importante de l'exercice : un outil qui ne trouve rien
+                ne prouve rien.
+              </p>
+              <p>
+                La réponse à <code>tri=couleur</code> contient <code>no such column: couleur</code> : le visiteur apprend
+                que sa valeur arrive directement dans le SQL, et comment s'appellent tes colonnes.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire corriger par Claude, et vérifier qu'il n'a pas triché</h3>
+            <ol>
+              <li>Copie le dossier <code>boutique</code> dans un dossier de travail. Dans la copie, donne à Claude ton tableau de l'exercice 1 et cette demande :</li>
+            </ol>
+            <pre><code>Corrige les requêtes SQL de serveur.js :
+- chaque valeur venant de l'adresse passe par un « ? » ;
+- le filtre categories génère autant de « ? » que de catégories ;
+- tri et ordre passent par une liste blanche (nom, prix, categorie ;
+  asc, desc), et toute autre valeur renvoie 400 ;
+- en cas d'erreur, renvoie un message neutre et écris le détail
+  avec console.error.
+Garde toutes les fonctionnalités actuelles.</code></pre>
+            <ol start="2">
+              <li>Relance le serveur et <code>node verifier.js</code> : tout doit réussir.</li>
+              <li>Relis le diff. Un test au vert ne suffit pas : cherche les mauvaises façons de faire passer les tests.</li>
+              <li>Relance <code>node audit-sql.js</code> sur ta copie, et classe chaque ligne qu'il signale encore.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 11 tests réussis, aucune valeur du visiteur dans le texte SQL, et
+              toutes les fonctionnalités toujours là (recherche, filtre, tri).
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>L'outil d'audit signale encore des lignes après la correction. Sont-elles dangereuses ? Regarde ce qu'elles insèrent.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Le code attendu est celui de la section « Exemple concret ». Les fausses corrections à refuser :</p>
+              <ul>
+                <li><code>q.replace(/'/g, "''")</code> : un nettoyage maison au lieu d'un <code>?</code>.</li>
+                <li>Le tri supprimé « pour simplifier » : les tests de tri échouent, ou ont été modifiés.</li>
+                <li>Un <code>try/catch</code> qui renvoie <code>200</code> et une liste vide au lieu de <code>400</code> : l'erreur est cachée.</li>
+                <li><code>verifier.js</code> modifié : ne laisse jamais l'IA changer le test qui la juge (on y revient en 4.5).</li>
+              </ul>
+              <p>
+                Après la correction, l'outil signale encore 3 lignes, mais elles n'insèrent que des <code>?</code> ou un
+                nom tiré de <code>TRIS</code>. Ce sont des fausses alertes. Classer chaque ligne, c'est ton travail, pas
+                celui de l'outil.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Auditer ton propre projet</h3>
+            <p>
+              Lance l'outil d'audit sur un de tes projets, par exemple
+              <code>node audit-sql.js C:\chemin\vers\royal-senteur</code>. Pour chaque ligne signalée, puis pour chaque
+              requête construite sur plusieurs lignes que tu trouves en relisant, classe-la comme dans l'exercice 1.
+              Rédige un rapport, puis une demande de correction pour Claude, et vérifie chaque correction.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un rapport d'audit (ligne, variable, origine, verdict) et, s'il y a
+              des failles, leur correction vérifiée par un test avec une apostrophe.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Si ton projet utilise un ORM, la plupart des requêtes sont déjà sûres. Concentre-toi sur les fonctions « brutes » : cherche <code>raw</code>, <code>Unsafe</code>, <code>query(</code>.</li>
+                <li>En PHP, cherche <code>mysqli_query</code> et <code>-&gt;query(</code> avec des variables, au lieu de <code>prepare</code>.</li>
+                <li>N'oublie pas les tris et les filtres des pages de liste (boutique, tableau de bord) : c'est là que l'IA colle le plus souvent des noms de colonnes.</li>
+                <li>Teste sur ta machine, jamais sur le site en ligne d'un autre.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Pourquoi ne peut-on pas écrire <code>ORDER BY ?</code> pour un tri choisi par le visiteur ?</legend>
+            <label><input type="radio" name="q1" /> Parce que SQLite ne sait pas trier.</label>
+            <label><input type="radio" name="q1" /> Parce qu'un <code>?</code> remplace une valeur, jamais un nom de colonne. Il faut une liste blanche.</label>
+            <label><input type="radio" name="q1" /> On peut, à condition de vérifier la longueur du texte.</label>
+            <p class="explication" hidden>
+              La base prépare la requête avant de connaître les valeurs, donc elle doit déjà savoir sur quelle colonne
+              trier. Pour un nom de colonne, on choisit dans une liste fixée par ton code, et on refuse tout le reste.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. En cas d'erreur, l'API renvoie <code>{ erreur: erreur.message }</code>. Quel est le problème ?</legend>
+            <label><input type="radio" name="q2" /> Aucun, c'est pratique pour déboguer.</label>
+            <label><input type="radio" name="q2" /> Le message est en anglais.</label>
+            <label><input type="radio" name="q2" /> Le message de la base révèle la structure de la requête et des tables à n'importe quel visiteur.</label>
+            <p class="explication" hidden>
+              <code>no such column: couleur</code> apprend à un inconnu que sa valeur arrive dans le SQL, et comment
+              s'appellent tes colonnes. Message neutre pour le visiteur, détail avec <code>console.error</code> dans les
+              journaux du serveur.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. <code>WHERE id = ${id}</code>, mais <code>id</code> a déjà été vérifié par la regex <code>\d+</code>. Que décides-tu ?</legend>
+            <label><input type="radio" name="q3" /> Pas exploitable aujourd'hui, mais fragile : je demande un <code>?</code> quand même.</label>
+            <label><input type="radio" name="q3" /> C'est une faille grave, à corriger en urgence.</label>
+            <label><input type="radio" name="q3" /> C'est parfait, on ne touche à rien.</label>
+            <p class="explication" hidden>
+              La regex ne laisse passer que des chiffres : rien ne peut s'injecter aujourd'hui. Mais la sécurité repose
+              alors sur une ligne lointaine que quelqu'un modifiera un jour. Avec un <code>?</code>, la requête est sûre
+              toute seule.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

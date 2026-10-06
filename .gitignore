@@ -5,3 +5,6 @@
 node_modules/
 video/out/
 *.mp4
+
+# Audio généré (se régénère avec npm run tts)
+video/public/audio/

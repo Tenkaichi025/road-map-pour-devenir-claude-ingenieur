@@ -1,0 +1,17 @@
+{
+  "name": "ingenieur-claude-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "voix": "node voix.mjs",
+    "tts": "node tts.mjs",
+    "studio": "remotion studio src/index.jsx",
+    "rendu": "remotion render src/index.jsx"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.533",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.533"
+  }
+}

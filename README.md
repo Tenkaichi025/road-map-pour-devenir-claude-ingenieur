@@ -65,6 +65,18 @@ Les vidéos sont fabriquées dans `video/` puis hébergées sur YouTube en « no
 jamais commités (trop lourds). Les clés API vont dans un fichier `.env` (modèle : `.env.example`), qui est ignoré
 par git.
 
+```bash
+cd video
+npm install                               # une seule fois
+npm run voix                              # chercher une voix (gratuit) -> out/voix.html
+npm run tts -- m1-01 --essai              # voir le texte envoyé à la voix (gratuit)
+npm run tts -- m1-01 --scene 1            # générer l'audio d'une scène
+npm run studio                            # prévisualiser la vidéo dans le navigateur
+npm run rendu -- m1-01 out/m1-01.mp4      # fabriquer le MP4
+```
+
+Écris le script dans `video/scripts/<id>.md` et corrige les prononciations dans `video/prononciation.json`.
+
 ## Crédits
 
 Polices sous licence SIL Open Font License : Archivo (Omnibus-Type), Source Serif 4 (Adobe), JetBrains Mono

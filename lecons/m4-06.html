@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Créer tes propres skills · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m4-06">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 4.6</p>
+          <h1>Créer tes propres skills</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Depuis le début du parcours, tu répètes les mêmes consignes : « lance les audits », « relis avec la grille »,
+            « écris les tests d'après les règles, pas d'après le code ». Tu les retapes dans chaque prompt, et tu en
+            oublies toujours une.
+          </p>
+          <p>
+            Un <strong>skill</strong> règle ça. C'est un dossier qui contient un fichier <code>SKILL.md</code> (ta
+            méthode, écrite une fois) et, si besoin, des scripts. Claude Code le charge quand il en a besoin : tu
+            l'appelles avec <code>/nom</code>, ou Claude le déclenche seul quand ta demande correspond. Tes grilles et tes
+            outils deviennent des réflexes permanents.
+          </p>
+          <p>
+            Mais un skill, c'est des consignes et du code que l'IA exécute. Il se teste, se relit et se versionne comme
+            le reste. Nos essais réels l'ont montré : <strong>une consigne peut être ignorée, un script fait toujours la
+            même chose</strong>.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Le site de rendez-vous d'un salon de coiffure, avec des failles à trouver, et une branche écrite par l'IA à
+            relire. On y construit 3 skills avec les outils des leçons précédentes. Tous les résultats cités ici viennent
+            d'essais réels (octobre 2026, Claude Code 2.1, avec Haiku, le plus petit modèle).
+          </p>
+
+          <h3>Anatomie d'un SKILL.md</h3>
+          <p>Un skill vit dans un dossier qui porte son nom. Deux emplacements possibles :</p>
+          <ul>
+            <li><code>.claude/skills/&lt;nom&gt;/SKILL.md</code> dans un projet : versionné avec git, partagé avec le projet.</li>
+            <li><code>~/.claude/skills/&lt;nom&gt;/SKILL.md</code> pour toi seul, dans tous tes projets (sous Windows : <code>C:\Users\&lt;toi&gt;\.claude\skills\</code>).</li>
+          </ul>
+          <pre><code>---
+name: mon-skill
+description: Ce que fait le skill. Utilise ce skill quand…
+---
+
+# Les consignes, en Markdown
+
+1. Lance `node "${CLAUDE_SKILL_DIR}/scripts/outil.js" $ARGUMENTS`
+2. …</code></pre>
+          <p>
+            Entre les deux lignes <code>---</code>, l'<strong>en-tête</strong> (au format YAML : des lignes « clé:
+            valeur »). En dessous, le <strong>corps</strong> : la méthode, en Markdown.
+          </p>
+          <ul>
+            <li><code>name</code> : minuscules, chiffres et tirets. C'est aussi la commande : <code>/mon-skill</code>.</li>
+            <li><code>description</code> : <strong>la ligne la plus importante</strong>. Elle dit ce que fait le skill et <em>quand</em> l'utiliser. C'est tout ce que Claude lit pour décider de s'en servir.</li>
+            <li><code>argument-hint</code> : l'aide affichée quand tu tapes <code>/mon-skill</code>.</li>
+            <li><code>allowed-tools</code> : les outils que Claude peut utiliser sans te demander pendant le skill. <code>Bash(node:*)</code> autorise seulement les commandes qui commencent par <code>node</code>.</li>
+            <li><code>disable-model-invocation: true</code> : seul toi peux déclencher le skill (avec <code>/nom</code>), jamais Claude de lui-même.</li>
+            <li>Dans le corps, <code>$ARGUMENTS</code> est remplacé par ce que tu tapes après <code>/nom</code>, et <code>${CLAUDE_SKILL_DIR}</code> par le chemin du dossier du skill. Ainsi, les scripts sont trouvés quel que soit le projet.</li>
+          </ul>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 270" role="img" aria-labelledby="schema-46-titre schema-46-desc">
+              <title id="schema-46-titre">Comment Claude charge un skill</title>
+              <desc id="schema-46-desc">
+                Au démarrage, Claude lit seulement le nom et la description de chaque skill. Quand une demande correspond,
+                ou quand tu tapes la commande, il lit tout le SKILL.md. Les consignes guident son jugement, mais peuvent
+                être ignorées. Les scripts sont exécutés : seule leur sortie entre dans la conversation, et ils font
+                toujours la même chose. Ce qui doit être garanti va dans un script.
+              </desc>
+              <defs>
+                <marker id="fleche-46" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <rect class="s-cadre" x="0.75" y="1" width="318.5" height="46" />
+              <text class="s-ui" x="160" y="21" text-anchor="middle">1. Au démarrage</text>
+              <text class="s-note" x="160" y="38" text-anchor="middle">nom + description de chaque skill</text>
+              <line class="s-trait" x1="160" y1="48" x2="160" y2="74" marker-end="url(#fleche-46)" />
+
+              <rect class="s-cadre" x="0.75" y="78" width="318.5" height="46" />
+              <text class="s-ui" x="160" y="98" text-anchor="middle">2. Le skill est appelé</text>
+              <text class="s-note" x="160" y="115" text-anchor="middle">Claude lit tout le SKILL.md</text>
+
+              <line class="s-trait" x1="120" y1="125" x2="76" y2="152" marker-end="url(#fleche-46)" />
+              <line class="s-trait" x1="200" y1="125" x2="244" y2="152" marker-end="url(#fleche-46)" />
+
+              <rect class="s-cadre" x="0.75" y="156" width="150" height="62" />
+              <text class="s-ui" x="76" y="178" text-anchor="middle">Consignes</text>
+              <text class="s-note" x="76" y="196" text-anchor="middle">le jugement</text>
+              <text class="s-note" x="76" y="211" text-anchor="middle">peuvent être ignorées</text>
+              <rect class="s-boite-contenu" x="170" y="156" width="149" height="62" />
+              <text class="s-ui-laterite" x="244" y="178" text-anchor="middle">Scripts</text>
+              <text class="s-note" x="244" y="196" text-anchor="middle">seule la sortie entre</text>
+              <text class="s-note" x="244" y="211" text-anchor="middle">toujours le même effet</text>
+
+              <text class="s-note" x="160" y="246" text-anchor="middle">Ce qui doit être garanti va dans</text>
+              <text class="s-note" x="160" y="262" text-anchor="middle">un script, pas dans une consigne.</text>
+            </svg>
+            <figcaption>
+              Une description vague, et le skill ne sert jamais. Une consigne importante, et elle peut quand même être
+              oubliée. Un script, lui, ne s'oublie pas.
+            </figcaption>
+          </figure>
+
+          <h3>Atelier 1 — Le skill « audit-securite » (module 3)</h3>
+          <p>
+            Les 5 outils d'audit du module 3 vont dans <code>.claude/skills/audit-securite/scripts/</code>. Le
+            <code>SKILL.md</code> dit comment s'en servir, et surtout comment juger leurs résultats :
+          </p>
+          <pre><code>---
+name: audit-securite
+description: Audit de sécurité d'un projet web ENTIER, pas seulement des changements en cours (injection SQL, XSS, secrets et historique git, HTTPS, droits d'accès), avec 5 scripts de tri puis une vérification ligne par ligne. Utilise ce skill quand on demande si un site est sûr, avant une mise en ligne, ou pour auditer tout un projet.
+argument-hint: "[dossier à auditer, la racine du projet par défaut]"
+allowed-tools: Read, Grep, Glob, Bash(node:*)
+---
+
+# Audit de sécurité
+
+Dossier à auditer : $ARGUMENTS (si rien n'est précisé : `.`, la racine du projet).
+
+## Étapes
+1. Lance ces 5 commandes telles quelles, une par une (le terminal est déjà à la racine du projet : n'ajoute pas de `cd` devant) :
+   - `node "${CLAUDE_SKILL_DIR}/scripts/audit-sql.js" &lt;dossier&gt;`
+   - `node "${CLAUDE_SKILL_DIR}/scripts/audit-xss.js" &lt;dossier&gt;`
+   - `node "${CLAUDE_SKILL_DIR}/scripts/audit-https.js" &lt;dossier&gt;`
+   - `node "${CLAUDE_SKILL_DIR}/scripts/audit-autorisations.js" &lt;dossier&gt;`
+   - `node "${CLAUDE_SKILL_DIR}/scripts/audit-secrets.js" .` (toujours la racine : il vérifie le .gitignore et l'historique git)
+2. Si une commande est refusée ou bloquée, relance-la. Si elle reste impossible, note « non lancé » : n'en conclus rien sur le code.
+3. Les scripts ne font qu'un premier tri. Pour CHAQUE ligne signalée, ouvre le fichier : confirme la faille ou écarte-la, en une phrase.
+4. Cherche ensuite ce que les scripts ne voient pas : requête construite sur plusieurs lignes, route sans vérification de session, propriétaire jamais vérifié.
+
+## Règles
+- Défensif uniquement. Aucune charge d'attaque, ni dans tes commandes, ni dans le rapport : décris ce qu'une personne pourrait obtenir, jamais comment.
+- Pour prouver une faille, un marqueur inoffensif seulement (`&lt;b&gt;test&lt;/b&gt;`, une apostrophe).
+- Ne recopie jamais un secret : affiche-le masqué.
+- Ne corrige rien pendant l'audit. Le rapport d'abord, les corrections après accord.
+
+## Rapport attendu
+1. Les 5 scripts : lancé ou non lancé, et le nombre de lignes signalées.
+2. Un tableau : fichier:ligne | catégorie | confirmé ou faux positif | correction proposée.
+3. Les 3 corrections prioritaires, la plus grave en premier.</code></pre>
+          <p>Chaque ligne de ce fichier vient d'un essai raté :</p>
+          <ul>
+            <li>
+              <strong>La description.</strong> Première version : « Audit de sécurité défensif d'un projet web… ». À la
+              question « Je mets le site en ligne demain. Est-ce qu'il est sûr ? », Claude a choisi un <em>autre</em> skill
+              installé (<code>security-review</code>, prévu pour les changements en cours), et a raté 3 problèmes sur 6.
+              Avec « un projet web ENTIER, pas seulement des changements en cours », il a choisi le bon.
+            </li>
+            <li>
+              <strong>« Lancé ou non lancé ».</strong> Une commande a été bloquée (par un contrôle de l'environnement,
+              un « hook »). Claude n'a pas relancé le script, puis il a écrit : « les scripts ont manqué l'injection
+              SQL ». Faux : le script n'avait jamais tourné. D'où l'étape 2 et le tableau en tête du rapport.
+            </li>
+            <li>
+              <strong>« N'ajoute pas de cd devant ».</strong> Claude écrivait <code>cd … ; node …</code>. Dans
+              PowerShell, une commande qui change de dossier demande toujours ton autorisation : en mode automatique,
+              les 5 ont été refusées.
+            </li>
+            <li>
+              <strong>Les règles ignorées.</strong> Malgré « Ne recopie jamais un secret » et « Aucune charge
+              d'attaque », Haiku a recopié la clé en clair dans son rapport et décrit une attaque. Les consignes ne
+              suffisent pas : c'est <code>audit-secrets.js</code> qui masque toujours la clé, parce que c'est écrit dans
+              son code. Ton rôle reste de relire le rapport.
+            </li>
+          </ul>
+
+          <h3>Atelier 2 — Le skill « relecture-pr » (grille de la leçon 4.4)</h3>
+          <pre><code>---
+name: relecture-pr
+description: Relit une branche produite par l'IA avec la grille en 5 points (périmètre, dépendances, sécurité et invariants, tests, lisibilité) et rend une décision. Utilise ce skill quand on demande de relire une branche, une PR ou un diff avant de le fusionner.
+argument-hint: "[branche de base, main par défaut]"
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(node:*)
+---
+
+# Relecture d'une branche
+
+Branche de base : $ARGUMENTS (si rien n'est précisé : main).
+
+## Étapes
+1. Retrouve la demande d'origine (le message de l'utilisateur, le ticket, les messages de commit). Si elle n'est pas claire, demande-la avant de relire : on juge un diff par rapport à une demande.
+2. Applique la grille de `${CLAUDE_SKILL_DIR}/grille-relecture.md`, point par point, avec les commandes qu'elle indique (remplace main par la branche de base).
+3. Si le skill audit-securite est installé, lance ses scripts sur les fichiers modifiés.
+4. Lance les tests du projet. Un test vert ne suffit pas : regarde ce qui a changé dans tests/.
+
+## Règles
+- Tu relis, tu ne corriges pas : aucun fichier modifié pendant la relecture.
+- Un attendu de test modifié, ou une nouvelle dépendance, est un PROBLÈME, sauf si la demande l'exige explicitement.
+- Chaque remarque cite sa preuve : fichier:ligne, ou la commande et sa sortie.
+- Ne recopie jamais un secret : affiche-le masqué.
+
+## Rapport attendu
+Les 5 points, chacun : OK ou PROBLÈME, avec la preuve.
+Puis la décision : ACCEPTER, DEMANDER UNE CORRECTION (liste numérotée) ou REFUSER.</code></pre>
+          <ul>
+            <li>Le skill <strong>pointe</strong> vers la grille (<code>grille-relecture.md</code>, dans son dossier) au lieu de la recopier : une seule version à tenir à jour.</li>
+            <li><code>allowed-tools</code> n'autorise que des commandes de lecture (<code>git diff</code>, <code>git log</code>, <code>git status</code>) : un relecteur n'a pas besoin d'écrire.</li>
+            <li>
+              La règle « Un attendu de test modifié… est un PROBLÈME » a été ajoutée après un essai. Sur une branche où
+              l'IA avait « mis à jour » un test (le piège 1 de la leçon 4.5), Claude l'avait classé comme une simple
+              conséquence d'un autre changement.
+            </li>
+          </ul>
+
+          <h3>Atelier 3 — Le skill « mutation-guard » (leçon 4.5)</h3>
+          <pre><code>---
+name: mutation-guard
+description: Mesure si les tests d'un fichier détectent vraiment les erreurs, par injection de fautes (score de mutation et survivants). Utilise ce skill quand on veut savoir si une suite de tests verte est solide, par exemple après que l'IA a écrit des tests.
+argument-hint: "&lt;fichier à muter, par exemple src/acompte.js&gt;"
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob, Bash(node:*), Bash(git status:*), Bash(git diff:*)
+---
+
+# Mutation Guard
+
+Fichier à muter : $ARGUMENTS. S'il manque, demande-le.
+
+## Étapes
+1. Vérifie avec `git status` que le fichier n'a aucune modification en cours. Sinon, arrête-toi et dis-le : le script modifie le fichier pendant l'expérience.
+2. Lance tel quel (le terminal est déjà à la racine du dépôt : n'ajoute pas de `cd` devant) : `node "${CLAUDE_SKILL_DIR}/scripts/mutants.js" . $ARGUMENTS`
+3. Ensuite, vérifie avec `git status` que le fichier est revenu à l'identique.
+4. Pour chaque survivant : propose le test qui le tuerait, avec un attendu écrit en dur d'après les règles (REGLES.md ou le cahier des charges), jamais d'après le code. Ou explique pourquoi c'est un mutant équivalent.
+
+## Règles
+- Ne modifie jamais le code source, ni un test existant.
+- N'écris les nouveaux tests qu'après accord. Relance alors le skill pour mesurer le nouveau score.
+
+## Rapport attendu
+Le score, la liste des survivants (ligne, faute), et pour chacun : le test proposé ou « mutant équivalent » avec la raison.</code></pre>
+          <ul>
+            <li><code>disable-model-invocation: true</code> : ce skill modifie un fichier pendant plusieurs secondes et relance les tests des dizaines de fois. C'est toi qui décides quand le lancer. Claude ne le voit même pas dans sa liste.</li>
+            <li>Le <code>git status</code> avant et après : on prouve que le fichier est revenu à l'identique, au lieu de le supposer.</li>
+            <li>
+              Résultat réel sur <code>src/acompte.js</code> : 7 fautes, 3 survivantes, 57 %. Le fichier a été restauré,
+              et Claude a proposé 3 tests écrits d'après <code>REGLES.md</code>, sans rien modifier. Une fois ces tests
+              ajoutés, le score monte à <strong>100 %</strong>. C'est l'essai le plus réussi, parce que le travail
+              délicat est fait par le script.
+            </li>
+          </ul>
+
+          <h3>Installer, tester, déployer</h3>
+          <ol>
+            <li><strong>Installer :</strong> copier le dossier du skill au bon endroit. Dans Claude Code, tape <code>/</code> puis le début du nom : le skill doit apparaître. Sinon, quitte et relance Claude Code.</li>
+            <li><strong>Contrôler la forme :</strong> <code>node verifier-skill.js &lt;dossier du skill&gt;</code> vérifie l'en-tête, la description, les scripts cités et les outils autorisés.</li>
+            <li>
+              <strong>Tester en 3 essais :</strong> l'appel direct (<code>/audit-securite</code>), le déclenchement par
+              une phrase (« est-ce que mon site est sûr ? »), et le non-déclenchement (« change la couleur du titre »
+              ne doit pas lancer d'audit). Si Claude te demande l'autorisation d'utiliser le skill, accepte.
+            </li>
+            <li>
+              <strong>Déployer :</strong> tes 3 skills de méthode vont dans <code>~/.claude/skills/</code>, et ils
+              servent dans tous tes projets, Royal Senteur comme Déesse Intimity. Les règles propres à un projet (les
+              prix en francs CFA entiers, le stock jamais négatif…) vont dans un skill du projet, dans
+              <code>.claude/skills/</code>, versionné avec lui.
+            </li>
+          </ol>
+
+          <h3>Le bilan du parcours</h3>
+          <p>Tu as parcouru les 4 modules. Chacun t'a donné une façon de vérifier ce que l'IA produit :</p>
+          <ul>
+            <li><strong>Front-end :</strong> lire ce que le navigateur reçoit et affiche (le DOM, le CSS, les outils F12), au lieu de croire la capture d'écran.</li>
+            <li><strong>Back-end :</strong> suivre une requête du formulaire jusqu'à la base de données, et la tester avec <code>curl</code>.</li>
+            <li><strong>Sécurité :</strong> repérer, corriger et <em>prouver</em> les 5 grandes failles : injection SQL, XSS, secrets, HTTPS, droits d'accès.</li>
+            <li><strong>Ingénieur Claude :</strong> git comme filet, des prompts cadrés, des tâches découpées, des diffs relus, des tests qui jugent, et des skills qui gardent tout ça.</li>
+          </ul>
+          <p>
+            La boucle à garder : <strong>cadrer → générer → relire → prouver → consolider</strong>. Chaque fois que tu
+            surprends l'IA dans une nouvelle erreur, ajoute une ligne à un skill, ou mieux, une vérification à un
+            script. Tes skills deviennent ta propre expérience, mise au travail.
+          </p>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Quand tu crées, installes ou utilises un skill :</p>
+          <ul class="liste-verif">
+            <li>Lis tout skill avant de l'installer, surtout s'il vient d'ailleurs : ses scripts s'exécutent sur ta machine, et <code>allowed-tools</code> leur évite de te demander la permission.</li>
+            <li><code>allowed-tools</code> est minimal : <code>Bash(node:*)</code> plutôt que <code>Bash</code>, et aucun droit d'écriture pour un skill qui relit.</li>
+            <li>Aucun secret dans un <code>SKILL.md</code> ni dans ses scripts : un skill se partage et se versionne.</li>
+            <li>La description dit quoi <em>et quand</em>, avec des mots qui la distinguent des autres skills installés.</li>
+            <li>Le skill a passé les 3 essais : appel direct, déclenchement par une phrase, non-déclenchement.</li>
+            <li>Le rapport dit quels scripts ont tourné. Un script « non lancé » ne prouve rien, ni dans un sens, ni dans l'autre.</li>
+            <li>Tu relis le rapport comme un diff de l'IA : chaque constat se retrouve dans la sortie d'un script ou dans le code (fichier:ligne), et tu cherches ce qui manque.</li>
+            <li>Ce qui doit être garanti (masquer un secret, restaurer un fichier, refuser de continuer) est écrit dans un script, pas seulement dans une consigne.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Un skill est un dossier avec un <code>SKILL.md</code> : la description dit quoi et QUAND ; le corps, la méthode ; les scripts, ce qui doit se faire pareil à chaque fois.</li>
+            <li>Au démarrage, Claude ne lit que le nom et la description. Il lit le corps quand le skill sert. Les scripts sont exécutés, et seule leur sortie entre dans la conversation.</li>
+            <li>Une consigne peut être ignorée, un script non : mets ce qui compte dans le script.</li>
+            <li>Un skill se teste (appel direct, phrase, non-déclenchement), et son rapport se relit.</li>
+            <li>Tes méthodes vont dans <code>~/.claude/skills</code>, les règles d'un projet dans son <code>.claude/skills</code>. Aucun secret dedans.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>Les fichiers sont dans <code>exercices/m4-06/</code> :</p>
+          <ul>
+            <li>
+              <code>node preparer-exercice.js &lt;dossier&gt;</code> crée le dépôt d'entraînement (hors du cours) : le site
+              du salon, une branche <code>ia/rappel-sms</code> à relire, et dans <code>.claude/skills/</code> les pièces
+              détachées des 3 skills (les scripts et la grille du cours). Les <code>SKILL.md</code>, c'est toi qui les
+              écris.
+            </li>
+            <li><code>node verifier-skill.js &lt;dossier du skill&gt;</code> contrôle la forme d'un skill avant de l'essayer.</li>
+          </ul>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Ton premier skill : audit-securite</h3>
+            <ol>
+              <li>Depuis <code>exercices/m4-06</code> : <code>node preparer-exercice.js C:\exos\salon-skills</code>.</li>
+              <li>Crée <code>C:\exos\salon-skills\.claude\skills\audit-securite\SKILL.md</code> avec le contenu de l'atelier 1. Les scripts sont déjà dans <code>scripts/</code>.</li>
+              <li><code>node verifier-skill.js C:\exos\salon-skills\.claude\skills\audit-securite</code> : vise 0 échec.</li>
+              <li>Ouvre Claude Code dans <code>C:\exos\salon-skills</code>, tape <code>/audit</code> : le skill apparaît. Lance <code>/audit-securite</code>.</li>
+              <li>Compare le rapport à la sortie des scripts. Puis, dans une nouvelle conversation (<code>/clear</code>), demande : « Je mets le site du salon en ligne demain. Est-ce qu'il est sûr ? ». Claude utilise-t-il ton skill ?</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> les 5 scripts sont « lancés » et 6 constats confirmés. Le skill est aussi
+              déclenché par la phrase, sans <code>/</code>.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <ul>
+                <li>Un script « non lancé » : une autorisation refusée, ou un contrôle de ton environnement qui bloque la première commande. Relance-le, et ne crois aucune conclusion tirée sans lui.</li>
+                <li>Claude choisit un autre skill ? Relis ta description : dit-elle clairement en quoi ton skill est différent ?</li>
+              </ul>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li><code>src/serveur.js:18</code> : requête SQL construite avec <code>${cliente}</code> → requête préparée (<code>WHERE cliente = ?</code>).</li>
+                <li><code>src/serveur.js:23</code> : suppression par id seul → <code>WHERE id = ? AND cliente = ?</code> (une cliente n'annule que SES rendez-vous).</li>
+                <li><code>public/app.js:7</code> : <code>innerHTML</code> avec des données de la base → <code>textContent</code>.</li>
+                <li><code>public/index.html:6</code> : feuille de style en <code>http://</code> → <code>https://</code>.</li>
+                <li>Aucun en-tête HSTS dans le code → à ajouter côté serveur, ou chez l'hébergeur.</li>
+                <li>Une clé SMS dans l'historique git (le commit de la branche <code>ia/rappel-sms</code>) : elle est visible depuis <code>main</code>, car le dépôt contient toutes les branches. Elle doit apparaître <strong>masquée</strong> dans le rapport.</li>
+              </ul>
+              <p>
+                Vérifie aussi l'honnêteté du rapport : la clé est-elle masquée ? Aucune charge d'attaque n'apparaît ? Si
+                Claude a enfreint une règle, ce n'est pas une surprise : c'est la raison pour laquelle le masquage est écrit
+                dans <code>audit-secrets.js</code>.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>relecture-pr et mutation-guard</h3>
+            <ol>
+              <li>Écris les deux <code>SKILL.md</code> (ateliers 2 et 3), et contrôle-les avec <code>verifier-skill.js</code>.</li>
+              <li><code>git switch ia/rappel-sms</code>, puis <code>/relecture-pr</code>. La demande d'origine était : « Ajoute un rappel SMS envoyé la veille de chaque rendez-vous. »</li>
+              <li>Fais ta propre relecture avec la grille de la leçon 4.4, et compare avec le rapport du skill. Note ce qu'il a raté.</li>
+              <li><code>git switch main</code>, puis <code>/mutation-guard src/acompte.js</code>. Accepte les tests proposés s'ils viennent bien de <code>REGLES.md</code>, puis relance le skill.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> la décision DEMANDER UNE CORRECTION (ou REFUSER), avec 6 problèmes. Puis
+              un score de mutation qui passe de 57 % à 100 %.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Lance <code>git diff main --stat</code> : 4 fichiers modifiés pour une demande qui n'en concernait qu'un nouveau. Pour chacun, demande-toi : « La demande l'exigeait-elle ? »</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li><code>src/acompte.js</code> : minimum passé de 1 000 à 500 F, hors de la demande, et contraire à <code>REGLES.md</code>.</li>
+                <li><code>tests/acompte.test.js</code> : attendu « mis à jour » de 1 000 à 600 pour coller au code (le piège 1 de la leçon 4.5).</li>
+                <li><code>package.json</code> : la dépendance <code>moment</code> n'est pas nécessaire, <code>toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })</code> suffit. Elle n'est même pas installée : le premier rappel planterait.</li>
+                <li><code>src/rappel.js:4</code> : clé SMS écrite en dur → dans <code>.env</code>, et à changer chez le fournisseur, car elle est déjà dans l'historique.</li>
+                <li><code>src/rappel.js:11</code> : appel de l'API en <code>http://</code> → <code>https://</code>.</li>
+                <li>Aucun test pour <code>rappel.js</code>.</li>
+              </ol>
+              <p>
+                Lors de nos essais avec Haiku, le skill a trouvé les points 1, 4 et 6. Il a jugé le point 2 comme une simple
+                conséquence, accepté <code>moment</code>, pris l'appel en <code>http://</code> pour une simple « URL en dur »,
+                et recopié la clé en clair. Un skill ne te remplace pas : il t'évite d'oublier des étapes. La relecture
+                finale reste la tienne.
+              </p>
+              <p>
+                Mutation : 3 survivants (<code>&lt;=</code> devient <code>&lt;</code>, <code>0</code> devient <code>1</code>,
+                et <code>Math.floor</code> devient <code>Math.ceil</code>). Les tests qui les tuent :
+                <code>acompte(0)</code> refusé avec <code>{ name: "Error" }</code>, <code>acompte(1) === 1000</code> et
+                <code>acompte(5501) === 1100</code>. Le score passe alors à 100 %.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Tes skills sur tes vrais projets</h3>
+            <p>
+              Copie tes 3 skills dans <code>~/.claude/skills/</code> (dans PowerShell :
+              <code>Copy-Item -Recurse C:\exos\salon-skills\.claude\skills\* $HOME\.claude\skills\</code>). Lance
+              <code>/audit-securite</code> sur Royal Senteur ou Déesse Intimity, <code>/relecture-pr</code> sur ta
+              prochaine branche, et <code>/mutation-guard</code> sur un module de calcul. Puis écris un 4ᵉ skill propre à
+              un projet, dans son <code>.claude/skills/</code> : ses règles métier, et si possible un script qui les
+              vérifie.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un rapport par skill sur un vrai projet, les corrections qui en
+              découlent, et un skill de projet versionné qui passe <code>verifier-skill.js</code> et les 3 essais.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Tu peux demander à Claude d'écrire le <code>SKILL.md</code> de ton projet à partir de tes règles… puis le relire avec cette leçon, comme n'importe quel code de l'IA.</li>
+                <li><code>mutants.js</code> lance <code>node --test</code>. Si ton projet utilise un autre outil de test, adapte cette commande dans le script, ou utilise un outil complet comme Stryker.</li>
+                <li>Les outils d'audit lisent le JavaScript, et une partie du PHP et du Python. Pour une autre technologie, garde la méthode du skill et adapte les motifs recherchés.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Tu demandes « Est-ce que mon site est sûr ? », et Claude utilise un autre skill que ton audit-securite. Que corriges-tu d'abord ?</legend>
+            <label><input type="radio" name="q1" /> Les <code>allowed-tools</code> du skill.</label>
+            <label><input type="radio" name="q1" /> La description : elle doit dire quoi, quand, et ce qui distingue ton skill des autres.</label>
+            <label><input type="radio" name="q1" /> Le nom du skill, à écrire en majuscules.</label>
+            <p class="explication" hidden>
+              Au démarrage, Claude ne lit que le nom et la description de chaque skill. C'est sur la description qu'il
+              choisit. Si elle ressemble à celle d'un autre skill installé, il peut prendre le mauvais.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. Le rapport d'audit indique « audit-sql.js : non lancé », puis conclut « aucune injection SQL ». Que vaut cette conclusion ?</legend>
+            <label><input type="radio" name="q2" /> Elle est fiable : Claude a relu le code.</label>
+            <label><input type="radio" name="q2" /> Elle prouve que le script est inutile.</label>
+            <label><input type="radio" name="q2" /> Rien : le script n'a pas tourné. Il faut le relancer avant de conclure.</label>
+            <p class="explication" hidden>
+              Un contrôle qui n'a pas tourné ne prouve rien. C'est pour ça que le skill exige l'état de chaque script en
+              tête du rapport : pour que tu voies tout de suite ce qui manque.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. Ton skill dit « Ne recopie jamais un secret », mais un rapport montre une clé en clair. Quelle est la parade la plus solide ?</legend>
+            <label><input type="radio" name="q3" /> Faire masquer la clé par le script lui-même, et continuer à relire chaque rapport.</label>
+            <label><input type="radio" name="q3" /> Écrire la consigne en majuscules, trois fois.</label>
+            <label><input type="radio" name="q3" /> Supprimer le skill.</label>
+            <p class="explication" hidden>
+              Une consigne peut être ignorée, un script fait toujours la même chose. Ce qui doit être garanti va dans le
+              code du script, et la relecture humaine reste le dernier contrôle.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

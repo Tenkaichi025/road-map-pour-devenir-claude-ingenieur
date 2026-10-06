@@ -20,10 +20,12 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   volontairement cassées ; leurs bugs sont décrits dans les corrections repliables des leçons — ne pas les « réparer »).
 
 ## Fonctionnalités développées & Restantes
-- Fait : structure, accueil, route, suivi de progression, gabarit de leçon, quiz interactif, module 1 complet (5 leçons, 15 exercices, 15 questions).
-- Restant : schémas visuels du module 1 (proposés), modules 2 à 4.
+- Fait : structure, accueil, route, suivi de progression, gabarit de leçon, quiz interactif, schéma SVG par leçon.
+  **Parcours complet : 4 modules, 20 leçons** (60 exercices, 60 questions), outils d'exercice tous vérifiés.
+- Restant : validation finale de Wilfried, puis mise en ligne sur GitHub Pages (aucun dépôt distant configuré).
 
 ## Dernières modifications importantes
+- 2026-10-06 : leçon 4.6 (créer ses propres skills), dernière du parcours. Modules 2 à 4 rédigés et validés un à un.
 - 2026-10-06 : abandon des vidéos, nettoyage du projet.
 - 2026-10-06 : étape 3 — module 1 rédigé. Exemples : galerie, formulaire de traiteur, page d'événement,
   liste de tâches, tableau de bord météo. Comportement des exercices vérifié automatiquement dans Chrome
@@ -50,6 +52,14 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - Chrome headless ne descend pas sous 500 px de large → tests mobiles via une iframe de 375 px.
 - Exercice « page qui déborde » : une longue URL ne débordait pas (Chrome coupe après les « / ») → cause
   remplacée par `white-space: nowrap` sur le titre. Leçon : toujours vérifier qu'un bug « pédagogique » se produit vraiment.
+
+- Leçon 4.6 : les 3 skills ont été essayés dans un vrai Claude Code (`claude -p`, Haiku). Constats reportés dans la
+  leçon : description trop vague → un autre skill installé choisi ; commande bloquée par un hook → conclusion fausse
+  (« le script a raté l'injection ») ; `cd` devant les commandes → refus en PowerShell ; règles « secret masqué » et
+  « aucune charge d'attaque » ignorées par Haiku (d'où : ce qui doit être garanti va dans le script).
+- Depuis Git Bash, `claude -p "/skill"` est converti en chemin (`C:/Program Files/Git/skill`) → lancer depuis PowerShell.
+- `audit-xss.js` s'analysait lui-même quand il est copié dans le projet audité (skill) → exclusion de soi-même,
+  comme les autres outils d'audit.
 
 ## Dépendances & Commandes clés
 - Exercice 3.3 : `python -m pip install git-filter-repo` (nettoyage d'historique, dépôt d'entraînement uniquement).
@@ -121,4 +131,10 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   contenant les 4 pièges, 4 bugs cachés), `mutants.js` (injection de fautes générique, restaure toujours le fichier).
   Vérifié : 63 % (6 survivants) sur la suite fournie ; tests écrits d'après REGLES.md → 5 rouges = les 4 bugs ;
   après correction 14 verts, 68 % (trous restants + mutants équivalents, expliqués dans la leçon).
-- Ensuite : leçon 4.6 (créer ses propres skills), dernière leçon du parcours.
+- Leçon 4.6 (skills) rédigée. `exercices/m4-06/` : `preparer-exercice.js` (salon de coiffure : SQL, IDOR, XSS, http,
+  pas de HSTS ; branche `ia/rappel-sms` : périmètre, attendu de test modifié, moment, clé en dur, http, aucun test ;
+  pièces détachées des 3 skills copiées depuis le cours dans `.claude/skills/`), `verifier-skill.js` (en-tête,
+  description avec déclencheur, scripts cités, allowed-tools, secrets). Les 3 SKILL.md de la leçon sont ceux testés.
+  Vérifié : audit 6 constats ; mutation-guard 57 % → 100 % avec 3 tests ; relecture : décision DEMANDER UNE CORRECTION.
+  **Module 4 terminé — parcours complet.**
+- Ensuite : validation de Wilfried, puis publication GitHub Pages (créer le dépôt distant, activer Pages sur main).

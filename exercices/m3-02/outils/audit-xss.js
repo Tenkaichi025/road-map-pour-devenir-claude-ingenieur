@@ -22,6 +22,7 @@ const REGLES = [
 ];
 const EXTENSIONS = new Set([".js", ".mjs", ".cjs", ".ts", ".jsx", ".tsx", ".vue", ".html", ".ejs", ".hbs", ".php"]);
 const IGNORES = new Set(["node_modules", ".git", "vendor", "dist", "build"]);
+const SOI_MEME = path.resolve(__filename);
 
 let trouvees = 0;
 function parcourir(chemin) {
@@ -29,7 +30,7 @@ function parcourir(chemin) {
     const complet = path.join(chemin, entree.name);
     if (entree.isDirectory()) {
       if (!IGNORES.has(entree.name)) parcourir(complet);
-    } else if (EXTENSIONS.has(path.extname(entree.name))) {
+    } else if (path.resolve(complet) !== SOI_MEME && EXTENSIONS.has(path.extname(entree.name))) {
       fs.readFileSync(complet, "utf8").split("\n").forEach((ligne, i) => {
         for (const [motif, conseil] of REGLES) {
           if (motif.test(ligne)) {

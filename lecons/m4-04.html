@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Relire et challenger le code · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m4-04">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 4.4</p>
+          <h1>Relire et challenger le code</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Quand tu fusionnes le code de l'IA, c'est <strong>ta signature</strong> qui est dessous. Si la boutique vend
+            des sacs qu'elle n'a plus en stock, ce n'est pas « la faute de Claude ». L'ingénieur n'est donc pas un tampon
+            d'approbation : la relecture est un acte de <strong>pilotage</strong> et de <strong>responsabilité</strong>.
+          </p>
+          <p>
+            Mais on ne relit pas un diff comme un roman, ligne après ligne, jusqu'à l'épuisement. On le relit comme un
+            enquêteur : avec des questions précises. Les <strong>invariants</strong> tiennent-ils encore (ce qui doit
+            toujours être vrai) ? Y a-t-il des <strong>effets de bord</strong> (une modification qui touche autre chose
+            que prévu) ? Et la <strong>complexité</strong> a-t-elle dérivé (plus de code, de dépendances, de couches que
+            le besoin n'en demande) ?
+          </p>
+          <p>
+            Et quand quelque chose te semble bizarre, tu <strong>challenges</strong> l'IA. Non pas « est-ce que c'est
+            bon ? » : elle répondra oui. Tu lui demandes de prouver, de justifier et de révéler ses compromis.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Le module de panier d'une boutique. Le ticket #42 demande une seule chose : « le client doit pouvoir changer la
+            quantité d'un article, ou le retirer en mettant 0 ; ajouter <code>modifierQuantite</code> ». L'IA livre sa
+            branche. Avec <code>lodash</code> installé, <strong>les 7 tests sont verts</strong>. Voici la relecture.
+          </p>
+
+          <h3>La stratégie : du plus révélateur au plus long</h3>
+          <ol>
+            <li><strong>La demande d'abord</strong> : relis le ticket. Tu ne peux pas juger un diff sans savoir ce qu'il devait faire.</li>
+            <li><strong>Le périmètre</strong> : <code>git diff main --stat</code>.</li>
+            <li><strong>Les tests et les dépendances</strong> : <code>git diff main -- tests/ package.json</code>. Ce qui a été retiré en dit souvent plus que ce qui a été ajouté.</li>
+            <li><strong>Le code, par ordre de risque</strong> : les entrées, les invariants, les effets de bord. Le reste en dernier.</li>
+          </ol>
+          <pre><code>git diff main --stat
+ package.json         |  3 +++                    ← une dépendance ?
+ src/commande.js      |  4 ++--                   ← le ticket ne parle pas de la commande
+ src/panier.js        | 32 ++++++++++++++++++++------------
+ tests/panier.test.js | 14 ++++++++++----        ← des lignes de test retirées ?
+ 4 files changed, 35 insertions(+), 18 deletions(-)</code></pre>
+
+          <h3>Ce que la relecture trouve</h3>
+          <pre><code>// 1. Le stock n'est plus vérifié à l'ajout (et son test a disparu)
+// Le stock est vérifié au moment du paiement, inutile de le faire ici.
+
+// 2. « Gère tout » : modifierQuantite modifie le panier REÇU, et ne valide rien
+function modifierQuantite(panier, reference, quantite) {
+  const ligne = panier.find((l) =&gt; l.reference === reference);
+  if (!ligne) return panier;                       // article absent : ignoré en silence
+  if (quantite == 0) {                             // == : la chaîne "0" passe aussi
+    panier.splice(panier.indexOf(ligne), 1);       // effet de bord
+    return panier;
+  }
+  ligne.quantite = quantite;                       // -5, "2", 1.5, 500… tout passe
+  return panier;
+}
+
+// 3. totalPanier renommé calculerTotal (et commande.js modifié en conséquence), avec lodash
+function calculerTotal(panier) {
+  return _.sumBy(panier, (ligne) =&gt; CATALOGUE[ligne.reference].prix * ligne.quantite);
+}</code></pre>
+          <p>
+            Mis à l'épreuve, ce code ne tient qu'<strong>un invariant sur onze</strong>. Une quantité de -5 donne un total
+            négatif (la boutique doit de l'argent au client), on commande 5 sacs alors qu'il en reste 3, et l'écran qui
+            affiche le panier voit celui-ci changer « tout seul », puisque l'objet reçu est modifié. Les tests verts ne
+            montraient rien de tout ça : l'IA n'avait testé que les cas qui marchent, et avait <strong>supprimé</strong>
+            le test du stock.
+          </p>
+
+          <h3>La grille en 5 points</h3>
+          <div class="tableau">
+            <table>
+              <thead><tr><th>Point</th><th>La question</th><th>Dans le ticket #42</th></tr></thead>
+              <tbody>
+                <tr><td>1. Périmètre</td><td>Chaque fichier et chaque changement viennent-ils de la demande ?</td><td>Non : renommage, <code>commande.js</code>, stock retiré.</td></tr>
+                <tr><td>2. Dépendances</td><td>Une nouvelle bibliothèque, pour quel besoin réel ?</td><td><code>lodash</code> pour une somme qu'un <code>reduce</code> faisait déjà.</td></tr>
+                <tr><td>3. Sécurité et invariants</td><td>Entrées validées ? Invariants tenus ? Effets de bord ?</td><td>Aucune validation, stock contourné, panier modifié en place.</td></tr>
+                <tr><td>4. Tests</td><td>Un test retiré ou modifié ? Les cas limites couverts ?</td><td>Test du stock supprimé, nouveaux tests « cas heureux » seulement.</td></tr>
+                <tr><td>5. Lisibilité</td><td>Relisible dans 6 mois ? Le plus simple possible ?</td><td>« Gère tout », <code>==</code>, retour silencieux.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Verdict : <strong>refuser</strong>. Ce n'est pas une correction de détail, il faut repartir de main. La bonne version tient en six lignes, et réutilise la règle qui existait déjà :</p>
+          <pre><code>// Change la quantité d'un article déjà dans le panier ; 0 le retire. Renvoie un NOUVEAU panier.
+function modifierQuantite(panier, reference, quantite) {
+  if (!panier.some((ligne) =&gt; ligne.reference === reference)) throw new Error(`Cet article n'est pas dans le panier : ${reference}`);
+  if (quantite === 0) return panier.filter((ligne) =&gt; ligne.reference !== reference);
+  verifierQuantite(reference, quantite);   // les mêmes règles qu'à l'ajout : entier, au moins 1, dans le stock
+  return panier.map((ligne) =&gt; (ligne.reference === reference ? { ...ligne, quantite } : ligne));
+}</code></pre>
+
+          <h3>Challenger l'IA : des prompts qui forcent la vérité</h3>
+          <pre><code>Explique ce diff fichier par fichier : pour chaque changement, quelle phrase
+du ticket le justifie ? Si aucune, dis-le.
+
+Liste les invariants de ce module (lis l'en-tête de src/panier.js) et montre,
+pour chacun, la ligne de ton code qui le garantit, ou admets qu'aucune ne le fait.
+
+Quels compromis as-tu faits ? Qu'est-ce qui pourrait casser chez un client ?
+
+Joue l'avocat du diable : trouve trois failles dans ton propre code, avec pour
+chacune un appel de fonction qui les prouve.
+
+Propose la version la plus simple qui répond au ticket. Qu'as-tu ajouté
+qui n'était pas demandé ?</code></pre>
+          <p>
+            Attention à la <strong>complaisance</strong> : face à une remarque, l'IA a tendance à te donner raison, même
+            quand tu as tort. Ne te contente donc jamais d'un « vous avez raison, je corrige ». Exige une preuve : une
+            ligne de code, un test qui échoue, un appel qui montre le problème.
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 300" role="img" aria-labelledby="schema-44-titre schema-44-desc">
+              <title id="schema-44-titre">La grille de relecture en 5 filtres</title>
+              <desc id="schema-44-desc">
+                Le diff de l'IA passe par cinq filtres : le périmètre (chaque fichier vient-il de la demande ?), les
+                dépendances (une nouvelle, pourquoi ?), la sécurité et les invariants (entrées validées, règles tenues ?),
+                les tests (aucun retiré, cas limites ajoutés ?) et la lisibilité (relisible dans six mois ?). À la sortie,
+                trois décisions : accepter si tout est bon, demander une correction sur des points précis, ou refuser si
+                c'est trop loin du besoin.
+              </desc>
+              <defs>
+                <marker id="fleche-44" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <rect class="s-cadre" x="70" y="1" width="180" height="32" />
+              <text class="s-ui" x="160" y="22" text-anchor="middle">Le diff de l'IA</text>
+              <line class="s-trait" x1="160" y1="34" x2="160" y2="48" marker-end="url(#fleche-44)" />
+
+              <rect class="s-cadre" x="0.75" y="52" width="318" height="28" />
+              <text class="s-ui" x="8" y="71">1. Périmètre</text>
+              <text class="s-note" x="118" y="71">chaque fichier vient de la demande ?</text>
+              <rect class="s-cadre" x="0.75" y="86" width="318" height="28" />
+              <text class="s-ui" x="8" y="105">2. Dépendances</text>
+              <text class="s-note" x="118" y="105">une nouvelle ? pour quel besoin ?</text>
+              <rect class="s-boite-contenu" x="1" y="120" width="318" height="28" />
+              <text class="s-ui-laterite" x="8" y="139">3. Sécurité</text>
+              <text class="s-note" x="118" y="139">entrées validées, invariants tenus ?</text>
+              <rect class="s-cadre" x="0.75" y="154" width="318" height="28" />
+              <text class="s-ui" x="8" y="173">4. Tests</text>
+              <text class="s-note" x="118" y="173">aucun retiré, cas limites couverts ?</text>
+              <rect class="s-cadre" x="0.75" y="188" width="318" height="28" />
+              <text class="s-ui" x="8" y="207">5. Lisibilité</text>
+              <text class="s-note" x="118" y="207">relisible dans six mois ?</text>
+
+              <line class="s-trait" x1="160" y1="218" x2="160" y2="236" marker-end="url(#fleche-44)" />
+              <rect class="s-cadre" x="0.75" y="240" width="98" height="32" />
+              <text class="s-ui" x="50" y="261" text-anchor="middle">Accepter</text>
+              <rect class="s-cadre" x="110" y="240" width="100" height="32" />
+              <text class="s-ui" x="160" y="261" text-anchor="middle">Corriger</text>
+              <rect class="s-boite-contenu" x="221" y="240" width="98" height="32" />
+              <text class="s-ui-laterite" x="270" y="261" text-anchor="middle">Refuser</text>
+              <text class="s-note" x="50" y="290" text-anchor="middle">tout est vert</text>
+              <text class="s-note" x="160" y="290" text-anchor="middle">points précis</text>
+              <text class="s-note" x="270" y="290" text-anchor="middle">trop loin du besoin</text>
+            </svg>
+            <figcaption>
+              La sécurité et les invariants sont en latérite : c'est le filtre que les tests verts ne remplacent jamais.
+              Et « refuser » est une vraie option, pas un échec.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>La relecture elle-même a ses pièges :</p>
+          <ul class="liste-verif">
+            <li>Tu as relu la demande <strong>avant</strong> le diff, et tu sais dire ce qu'il devait faire en une phrase.</li>
+            <li>Tu as lu le <code>--stat</code>, les tests et <code>package.json</code> avant de te plonger dans le code.</li>
+            <li>Pour chaque fonction modifiée ou renommée, tu as cherché ses autres usages (<kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>F</kbd>). Un renommage peut casser du code ailleurs, ou en modifier en silence.</li>
+            <li>Tu as écrit noir sur blanc les invariants du module, et vérifié chacun, pas seulement « ça a l'air bon ».</li>
+            <li>Tu as cherché les effets de bord : un objet reçu modifié (<code>push</code>, <code>splice</code>, une affectation sur un paramètre), un état partagé.</li>
+            <li>Tu ne t'es pas contenté d'un « vous avez raison » de l'IA : chaque correction est prouvée par un test ou un appel.</li>
+            <li>Tu as osé refuser un diff trop éloigné de la demande, plutôt que de le rafistoler point par point.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Tu signes ce que tu fusionnes : la relecture est du pilotage, pas un tampon.</li>
+            <li>L'ordre : la demande, le <code>--stat</code>, les tests et les dépendances, puis le code par ordre de risque.</li>
+            <li>On traque trois choses : les invariants cassés, les effets de bord, la complexité qui dérive.</li>
+            <li>La grille : périmètre, dépendances, sécurité et invariants, tests, lisibilité. Puis accepter, corriger ou refuser.</li>
+            <li>Challenger l'IA, c'est exiger des preuves (une ligne, un test, un appel), pas des promesses.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>Les fichiers sont dans <code>exercices/m4-04/</code> :</p>
+          <ul>
+            <li><code>node preparer-exercice.js &lt;dossier&gt;</code> crée le dépôt (hors du cours) : le panier, <code>TICKET.md</code>, et la branche <code>ia/modifier-quantite</code>.</li>
+            <li><code>node verifier-invariants.js &lt;dépôt&gt;</code> met les invariants à l'épreuve, sur la branche où tu te trouves.</li>
+            <li><code>grille-relecture.md</code> : la grille en 5 points, à imprimer ou à réutiliser (elle servira en 4.6).</li>
+          </ul>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Relire la pull request du ticket #42</h3>
+            <ol>
+              <li>Depuis <code>exercices/m4-04</code> : <code>node preparer-exercice.js C:\exos\panier-pr</code>. Lis <code>TICKET.md</code>.</li>
+              <li><code>git switch ia/modifier-quantite</code>, puis <code>node --test</code>. Lis l'erreur, puis <code>npm install</code> et relance.</li>
+              <li><code>git diff main --stat</code>, puis <code>git diff main -- tests/ package.json</code>, puis <code>git diff main -- src/</code>.</li>
+              <li>Lance le contrôle de la leçon 4.2 : <code>node ..\m4-02\controle-ia.js C:\exos\panier-pr main</code>.</li>
+              <li>Lance <code>node verifier-invariants.js C:\exos\panier-pr</code>.</li>
+              <li>Remplis la grille en 5 points, et prends ta décision.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> une grille remplie, avec au moins un problème par point, et une décision
+              argumentée. Les tests sont verts, mais seul 1 invariant sur 11 tient.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Compare l'en-tête de <code>src/panier.js</code> (les invariants écrits) avec le code de <code>modifierQuantite</code>. Puis cherche ce qu'est devenue <code>verifierQuantite</code>.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>La grille de la section « Exemple concret », plus ces détails :</p>
+              <ul>
+                <li>Sans <code>npm install</code>, les tests plantent (<code>Cannot find module 'lodash'</code>) : « ça marche chez moi », dit l'IA.</li>
+                <li><code>controle-ia.js</code> signale de lui-même la dépendance et le test retiré : tes outils des leçons précédentes travaillent pour toi.</li>
+                <li><code>verifierQuantite</code> a disparu : la seule fonction qui garantissait l'invariant du stock n'est plus appelée nulle part.</li>
+                <li>Décision : refuser, puis repartir de main avec un prompt cadré (leçon 4.2) qui exige de réutiliser <code>verifierQuantite</code>, de ne pas modifier le panier reçu, et de ne toucher ni aux autres fichiers ni aux tests existants.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Challenger Claude, puis faire corriger</h3>
+            <ol>
+              <li>Sur la branche de l'IA, ouvre Claude Code et pose-lui, une par une, les questions de la section « Challenger l'IA ».</li>
+              <li>Note pour chaque réponse : a-t-il admis le problème ? A-t-il apporté une preuve, ou seulement une promesse ?</li>
+              <li>Sur une nouvelle branche partie de main, écris un prompt cadré pour le ticket #42, et fais travailler Claude.</li>
+              <li>Vérifie : <code>verifier-invariants.js</code>, <code>node --test</code>, <code>controle-ia.js</code>, puis ta grille.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un compte rendu des réponses de Claude (aveux, preuves, complaisance),
+              puis une version qui tient 11 invariants sur 11, sans dépendance ni test retiré, avec de nouveaux tests sur
+              les cas limites.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Dans ton prompt, cite l'en-tête des invariants et la fonction <code>verifierQuantite</code>. Ajoute « ne modifie que src/panier.js et tests/panier.test.js ; aucun test existant modifié ».</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>La fonction attendue est celle de la section « Exemple concret » (six lignes). Pendant le challenge, sois attentif :</p>
+              <ul>
+                <li>Une réponse du type « vous avez raison, j'ajoute une validation » sans dire <em>laquelle</em> : demande la ligne exacte.</li>
+                <li>Une défense du genre « le stock est vérifié au paiement » : demande où, dans le code. Il n'y a pas de paiement dans ce projet.</li>
+                <li>Les nouveaux tests doivent couvrir -1, « 2 » en texte, 1,5, le dépassement du stock, l'article absent, et l'immutabilité.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Relire un vrai diff de ton projet</h3>
+            <p>
+              Prends la dernière modification faite par l'IA dans un de tes projets (ou fais-en faire une petite sur une
+              branche). Relis-la avec la grille en 5 points, en commençant par écrire les invariants du module concerné.
+              Rédige ton compte rendu de relecture, puis challenge Claude avec au moins deux des prompts de la leçon.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> les invariants écrits, une grille remplie, une décision, et ce que le
+              challenge a révélé (ou non).
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Un module sans invariants écrits ? Commence par là : c'est souvent la découverte la plus utile de l'exercice.</li>
+                <li>Garde ton compte rendu comme modèle : la leçon 4.6 transformera cette grille en skill.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. L'IA te livre un diff de 300 lignes. Par quoi commences-tu ?</legend>
+            <label><input type="radio" name="q1" /> Par la première ligne du premier fichier, jusqu'à la fin.</label>
+            <label><input type="radio" name="q1" /> Par la demande, puis <code>git diff --stat</code>, puis les tests et les dépendances, avant le code.</label>
+            <label><input type="radio" name="q1" /> Par lancer les tests : s'ils sont verts, c'est bon.</label>
+            <p class="explication" hidden>
+              La demande dit ce qu'on attendait, le <code>--stat</code> montre si le périmètre a été respecté, et les tests
+              retirés ou modifiés signalent les problèmes les plus graves. Des tests verts ne prouvent pas que les bons cas
+              sont testés.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. Tu demandes à Claude « Ton code est-il correct ? ». Il répond « Oui ». Quelle meilleure question poser ?</legend>
+            <label><input type="radio" name="q2" /> « Tu es vraiment sûr ? »</label>
+            <label><input type="radio" name="q2" /> « Réécris-le entièrement, au cas où. »</label>
+            <label><input type="radio" name="q2" /> « Liste les invariants du module, et montre pour chacun la ligne qui le garantit, ou admets qu'il n'y en a pas. »</label>
+            <p class="explication" hidden>
+              Une question fermée obtient une réponse rassurante. Une question qui exige une preuve précise oblige l'IA à
+              confronter son code aux règles, et révèle les trous.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. <code>modifierQuantite</code> modifie le tableau reçu au lieu d'en renvoyer un nouveau. Pourquoi est-ce un problème ?</legend>
+            <label><input type="radio" name="q3" /> C'est un effet de bord : les autres parties du programme qui partagent ce panier le voient changer à leur insu, et l'invariant du module est cassé.</label>
+            <label><input type="radio" name="q3" /> Ce n'est pas un problème, c'est plus rapide.</label>
+            <label><input type="radio" name="q3" /> Le problème est seulement esthétique.</label>
+            <p class="explication" hidden>
+              L'en-tête du module promettait que les fonctions ne modifient jamais le panier reçu. Les autres parties du
+              code s'appuient sur cette promesse : la briser crée des bugs ailleurs, difficiles à retrouver.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

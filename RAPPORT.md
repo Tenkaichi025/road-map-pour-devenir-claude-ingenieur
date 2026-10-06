@@ -113,4 +113,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   solution de référence en 3 versions (0/10 au départ, chaque version valide son étape et échoue à la suivante, 28/28).
 - À réutiliser en 4.5 : mes premiers tests d'acceptation « assert.throws » passaient sur un fichier VIDE (TypeError :
   fonction absente = « erreur »). Corrigé avec assert.throws(fn, { name: "Error" }).
-- Ensuite : leçon 4.4 (relire et challenger le code).
+- Leçon 4.4 (relire et challenger) rédigée. `exercices/m4-04/` : `preparer-exercice.js` (panier avec stock, TICKET.md,
+  branche `ia/modifier-quantite` : lodash, renommage, stock retiré + test supprimé, mutation, aucune validation ;
+  7 tests verts avec lodash), `verifier-invariants.js` (1/11 sur la branche IA, 11/11 sur la correction de référence),
+  `grille-relecture.md` (5 points, à réutiliser en 4.6). controle-ia.js (4.2) réutilisé dans l'exercice.
+- Ensuite : leçon 4.5 (tests verts qui ne prouvent rien) puis 4.6 (skills).

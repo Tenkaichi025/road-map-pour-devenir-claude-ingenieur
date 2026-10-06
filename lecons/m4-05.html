@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Les tests verts qui ne prouvent rien · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m4-05">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 4.5</p>
+          <h1>Les tests verts qui ne prouvent rien</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            « Tous les tests passent » : c'est la phrase la plus rassurante… et la plus trompeuse de l'IA. Un test vert
+            dit seulement « ce que j'ai vérifié est vrai ». Il ne dit rien de ce qu'il n'a <strong>pas</strong> vérifié.
+            Une suite 100 % verte peut donc cacher une application cassée : elle teste les mauvaises choses, ou les teste
+            de travers.
+          </p>
+          <p>
+            Un bon test a une seule qualité qui compte : il <strong>passe au rouge quand le code est faux</strong>. D'où
+            la parade de l'ingénieur, l'<strong>injection de fautes</strong> (on dit aussi <em>mutation testing</em>). On
+            abîme volontairement le code (un <code>&gt;</code> devient <code>&gt;=</code>, un 10 devient 11), puis on
+            relance les tests. S'ils restent verts, ils ne protègent pas cette partie du code.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Le module de devis d'une boutique. Les règles sont écrites dans <code>REGLES.md</code> : 10 % de remise à
+            partir de <strong>5</strong> commandes, arrondie au franc inférieur ; livraison de 2 000 F, offerte à partir
+            de 50 000 F <strong>inclus</strong> ; quantités entières d'au moins 1. La suite de tests : 7 tests,
+            <strong>tous verts</strong>. Le code contient pourtant 4 bugs. Voici les 4 pièges qui les cachent.
+          </p>
+
+          <h3>Piège 1 — L'assertion altérée</h3>
+          <pre><code>test("Client fidèle : 10 % de remise", () =&gt; {
+  assert.equal(remiseFidelite(24000, 4), 2400); // mis à jour pour correspondre au code
+});</code></pre>
+          <p>
+            La règle dit « à partir de 5 commandes ». Le code donne la remise dès 4 commandes. Le test échouait, alors on
+            a « mis à jour » le test pour qu'il colle au code. Désormais, le test <strong>protège le bug</strong>. C'est
+            exactement ce que fait une IA à qui l'on demande « fais passer les tests » (leçon 4.1).
+          </p>
+
+          <h3>Piège 2 — L'erreur d'exécution prise pour une validation</h3>
+          <pre><code>test("Un devis invalide est refusé", () =&gt; {
+  assert.throws(() =&gt; calculerDevis(undefined));
+});</code></pre>
+          <p>
+            Le test passe… parce que <code>undefined.reduce</code> plante (une <code>TypeError</code>), pas parce que le
+            code valide quoi que ce soit. Une quantité de -2 est d'ailleurs acceptée sans broncher. C'est le piège trouvé
+            en construisant la leçon 4.3 : des tests de « refus » qui passaient sur un fichier <strong>vide</strong>. La
+            parade : exiger une vraie erreur de validation, avec <code>assert.throws(fn, { name: "Error" })</code>, et
+            tester avec des données <em>presque</em> valides (une quantité de -2), pas avec <code>undefined</code>.
+          </p>
+
+          <h3>Piège 3 — Le test tautologique, ou qui teste son propre mock</h3>
+          <pre><code>test("La remise vaut 10 % du montant", () =&gt; {
+  const montant = 31995;
+  assert.equal(remiseFidelite(montant, 6), Math.round(montant * 0.1));   // recopie le calcul du code
+});
+
+test("Livraison offerte pour les grosses commandes", (t) =&gt; {
+  t.mock.method(devis, "fraisLivraison", () =&gt; 0);    // remplace la vraie fonction par « renvoie 0 »
+  assert.equal(devis.fraisLivraison(80000), 0);        // … et vérifie que le faux renvoie 0
+});</code></pre>
+          <p>
+            Le premier recalcule l'attendu avec la <strong>même formule</strong> que le code, y compris le mauvais
+            arrondi : il ne peut jamais échouer. Le second remplace la fonction par un faux (un <em>mock</em>), puis teste
+            le faux : le vrai code n'est jamais exécuté. Un attendu s'écrit en dur, calculé à la main d'après la règle :
+            10 % de 31 995 F, arrondis vers le bas, font <strong>3 199</strong> F.
+          </p>
+
+          <h3>Piège 4 — La couverture aveugle</h3>
+          <p>
+            Tous les tests passent par le « cas heureux » : 24 000 F, 30 000 F, 80 000 F. Aucun ne touche les
+            <strong>limites</strong> : 50 000 F pile, 4 et 5 commandes, une quantité de 1, un montant qui donne des
+            centimes. Or c'est là que vivent les bugs. Le code écrit <code>montant &gt; 50000</code> au lieu de
+            <code>&gt;=</code> : le client à 50 000 F pile paie la livraison, et aucun test ne le voit.
+          </p>
+
+          <h3>La parade : injecter des fautes</h3>
+          <pre><code>node mutants.js C:\exos\devis-tests src/devis.js
+
+16 fautes injectées dans src/devis.js : 10 détectée(s) par les tests, 6 survivante(s).
+SURVIVANT  ligne 11 : Math.round devient Math.ceil
+SURVIVANT  ligne 16 : « &gt; » devient « &gt;= »
+SURVIVANT  ligne 22 : « - » devient « + »
+…
+Score de mutation : 63 %.</code></pre>
+          <p>
+            Chaque survivant indique un test qui manque : on peut changer l'arrondi, déplacer la limite des 50 000 F, ou
+            <strong>ajouter</strong> la remise au lieu de la soustraire dans le devis complet, et la suite reste verte.
+            Ensuite, on écrit des tests <strong>à partir des règles</strong> (pas à partir du code) : 4 commandes donnent 0,
+            5 commandes 2 400, 2 995 F donnent 299, 50 000 F pile donnent 0, une quantité de -2 est refusée. Ils passent
+            au <strong>rouge</strong> 5 fois : les 4 bugs apparaissent. On corrige le code, sans toucher aux nouveaux
+            tests, et tout repasse au vert.
+          </p>
+          <p>
+            Relancé ensuite, l'outil montre encore des survivants. Deux sortes : les <strong>vrais trous</strong> (aucun test
+            ne combine remise et devis complet, rien ne vérifie qu'une quantité de 1 est acceptée), à combler par un test.
+            Et les <strong>mutants équivalents</strong> : des fautes qui ne changent rien au comportement (une valeur par
+            défaut de 0 ou de 1 commande, quand la remise commence à 5). Ceux-là, on les note, et on passe.
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 254" role="img" aria-labelledby="schema-45-titre schema-45-desc">
+              <title id="schema-45-titre">L'injection de fautes</title>
+              <desc id="schema-45-desc">
+                On prend le code, on y injecte une faute (par exemple « supérieur » devient « supérieur ou égal »), puis on
+                relance les tests. S'ils passent au rouge, la faute est détectée : le mutant est tué. S'ils restent verts,
+                la faute survit : un test manque. Le bon test est celui qui passe au rouge quand le code est faux.
+              </desc>
+              <defs>
+                <marker id="fleche-45" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <rect class="s-cadre" x="0.75" y="1" width="130" height="38" />
+              <text class="s-ui" x="66" y="25" text-anchor="middle">Ton code</text>
+              <line class="s-trait" x1="132" y1="20" x2="166" y2="20" marker-end="url(#fleche-45)" />
+              <rect class="s-boite-contenu" x="170" y="1" width="149" height="38" />
+              <text class="s-ui-laterite" x="244" y="25" text-anchor="middle">Une faute injectée</text>
+              <text class="s-code" x="244" y="58" text-anchor="middle">&gt; devient &gt;=</text>
+
+              <line class="s-trait" x1="244" y1="64" x2="244" y2="82" marker-end="url(#fleche-45)" />
+              <rect class="s-cadre" x="90" y="86" width="140" height="36" />
+              <text class="s-ui" x="160" y="109" text-anchor="middle">On relance les tests</text>
+
+              <line class="s-trait" x1="130" y1="123" x2="76" y2="152" marker-end="url(#fleche-45)" />
+              <line class="s-trait" x1="190" y1="123" x2="244" y2="152" marker-end="url(#fleche-45)" />
+
+              <rect class="s-cadre" x="0.75" y="156" width="150" height="52" />
+              <text class="s-ui" x="76" y="178" text-anchor="middle">Rouge</text>
+              <text class="s-note" x="76" y="198" text-anchor="middle">faute détectée ✓</text>
+              <rect class="s-boite-contenu" x="170" y="156" width="149" height="52" />
+              <text class="s-ui-laterite" x="244" y="178" text-anchor="middle">Vert = survivant</text>
+              <text class="s-note" x="244" y="198" text-anchor="middle">un test manque</text>
+
+              <text class="s-note" x="160" y="234" text-anchor="middle">Le bon test est celui qui passe au rouge</text>
+              <text class="s-note" x="160" y="250" text-anchor="middle">quand le code est faux.</text>
+            </svg>
+            <figcaption>
+              Ici, le vert est la mauvaise nouvelle. Un mutant qui survit, c'est une erreur que l'IA pourrait introduire
+              demain sans qu'aucun test ne bronche.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Quand l'IA écrit ou modifie des tests :</p>
+          <ul class="liste-verif">
+            <li>Aucun test existant n'a vu son attendu changer sans que la règle ait changé. Un commentaire « mis à jour pour correspondre au code » est une alerte rouge.</li>
+            <li>Les tests de refus exigent une vraie erreur de validation (<code>{ name: "Error" }</code> ou un message précis), avec des données presque valides, pas <code>undefined</code>.</li>
+            <li>Les attendus sont écrits en dur, calculés à la main d'après la règle. Jamais recalculés avec la formule du code.</li>
+            <li>Aucun mock ne remplace la fonction même qu'on prétend tester. Un mock sert à isoler une dépendance (le réseau, la date), pas le code testé.</li>
+            <li>Les limites sont testées : pile sur le seuil, juste en dessous, juste au-dessus, zéro, une valeur négative, un montant qui donne des centimes.</li>
+            <li>Les tests sont écrits <strong>à partir des règles</strong> (le cahier des charges), pas en lisant le code : sinon, ils recopient ses bugs.</li>
+            <li>Lance l'injection de fautes. Chaque survivant est soit un test à ajouter, soit un mutant équivalent que tu sais justifier.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Un test vert prouve seulement ce qu'il vérifie. Un bon test passe au rouge quand le code est faux.</li>
+            <li>Les 4 pièges : l'assertion altérée, la TypeError prise pour une validation, la tautologie ou le mock, la couverture aveugle.</li>
+            <li>Les attendus s'écrivent en dur, à partir des règles. Les limites se testent toujours.</li>
+            <li>Injecter des fautes révèle les tests inutiles : chaque survivant est un test qui manque.</li>
+            <li>Ne laisse jamais l'IA modifier un test pour faire passer son code : c'est le test qui juge, pas l'inverse.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>Les fichiers sont dans <code>exercices/m4-05/</code> :</p>
+          <ul>
+            <li><code>node preparer-exercice.js &lt;dossier&gt;</code> crée le dépôt (hors du cours) : <code>REGLES.md</code>, <code>src/devis.js</code> et sa suite de 7 tests verts.</li>
+            <li><code>node mutants.js &lt;dépôt&gt; &lt;fichier&gt;</code> injecte les fautes une par une, et liste les survivants. Il fonctionne sur n'importe quel fichier JavaScript, et remet toujours le fichier d'origine en place.</li>
+          </ul>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Démasquer la suite parfaite</h3>
+            <ol>
+              <li>Depuis <code>exercices/m4-05</code> : <code>node preparer-exercice.js C:\exos\devis-tests</code>, puis <code>node --test</code> dans ce dossier. Tout est vert.</li>
+              <li>Lis <code>REGLES.md</code>, puis <code>tests/devis.test.js</code>. Pour chacun des 7 tests, note s'il tombe dans un des 4 pièges.</li>
+              <li>Depuis <code>exercices/m4-05</code> : <code>node mutants.js C:\exos\devis-tests src/devis.js</code>.</li>
+              <li>Pour chaque survivant, écris en une phrase le test qui l'aurait tué.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> les 4 pièges repérés dans la suite, un score de mutation de 63 % avec 6
+              survivants, et un test imaginé pour chacun.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Compare chaque nombre de <code>REGLES.md</code> (5 commandes, 50 000 F inclus, arrondi inférieur, quantité ≥ 1) avec ce que le code et les tests en font.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li>Piège 1 : « Client fidèle » (4 commandes, « mis à jour pour correspondre au code »). Piège 2 : « Un devis invalide est refusé » (<code>undefined</code>). Piège 3 : « La remise vaut 10 % » (tautologie) et « Livraison offerte » (mock). Piège 4 : tout le reste, qui n'est que du cas heureux.</li>
+                <li>Les survivants : la limite de 50 000 F (<code>&gt;</code> ou <code>&gt;=</code>, et 50 000 ou 50 001), l'arrondi (<code>Math.round</code> ou <code>Math.ceil</code>), la livraison « offerte » qui pourrait coûter 1 F (le seul test sur ce cas teste un mock), le signe dans <code>montant - remise</code>, et la valeur par défaut des commandes. Ce dernier est un mutant équivalent : 0 ou 1 commande, la remise reste nulle.</li>
+                <li>Les tests qui manquent : 50 000 F pile → livraison 0 ; 49 999 F → 2 000 ; 2 995 F → remise de 299 ; un devis complet avec remise (5 commandes, 24 000 F → total 23 600 F).</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Des tests qui jugent, puis un code qui obéit</h3>
+            <ol>
+              <li>Sur une branche, demande à Claude :</li>
+            </ol>
+            <pre><code>Écris tests/regles.test.js à partir de REGLES.md UNIQUEMENT, sans lire
+src/devis.js. Un test par règle et par limite (seuils pile, juste en
+dessous, juste au-dessus). Attendus écrits en dur. Pour les refus :
+assert.throws(fn, { name: "Error" }) avec des données presque valides.</code></pre>
+            <ol start="2">
+              <li><code>node --test</code> : note chaque test rouge. Ce sont les bugs du code.</li>
+              <li>
+                Demande ensuite : « Corrige src/devis.js pour que tous les tests passent. Tu n'as pas le droit de modifier
+                un seul test. » Puis vérifie avec <code>git diff --stat</code> que le dossier <code>tests/</code> n'a pas bougé.
+              </li>
+              <li>Relance <code>mutants.js</code>. Ajoute des tests jusqu'à ce que chaque survivant restant soit un mutant équivalent que tu sais expliquer.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> des tests rouges qui révèlent les 4 bugs, un code corrigé sans aucun test
+              modifié, puis des survivants tous expliqués.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Si Claude lit <code>src/devis.js</code> pour écrire les tests, il risque de recopier ses bugs (le « 4 commandes », le <code>Math.round</code>). Vérifie ses attendus à la main contre <code>REGLES.md</code>.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Les 4 bugs à révéler, puis à corriger :</p>
+              <ul>
+                <li><code>commandesPassees &gt;= 4</code> → <code>&gt;= 5</code> ;</li>
+                <li><code>Math.round</code> → <code>Math.floor</code> ;</li>
+                <li><code>montant &gt; SEUIL</code> → <code>&gt;= SEUIL</code> ;</li>
+                <li>aucune validation → vérifier que prix et quantité sont des entiers, avec une quantité d'au moins 1.</li>
+              </ul>
+              <p>
+                Pense aussi aux anciens tests piégés : l'attendu du piège 1 doit redevenir conforme à la règle (5
+                commandes), la tautologie devient « 31 995 F → 3 199 », et le test qui teste son mock est à supprimer et à
+                remplacer.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Le score de mutation de ton projet</h3>
+            <p>
+              Choisis un module de calcul dans un de tes projets (un panier, des frais, des stocks…) qui a des tests.
+              Lance <code>mutants.js</code> dessus. Pour chaque survivant : écris le test qui manque, ou explique pourquoi
+              c'est un mutant équivalent. Repère aussi les 4 pièges dans la suite existante.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> le score avant et après, les tests ajoutés, et la liste des pièges
+              trouvés dans tes tests actuels.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Pas de tests du tout ? Le score sera de 0 % : commence par une règle et ses limites.</li>
+                <li>Pour un vrai projet, il existe des outils complets d'injection de fautes (Stryker pour JavaScript). <code>mutants.js</code> suffit pour comprendre le principe et repérer les pires trous.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Un test contient <code>assert.equal(remiseFidelite(24000, 4), 2400); // mis à jour pour correspondre au code</code>, alors que la règle dit « à partir de 5 commandes ». Quel est le problème ?</legend>
+            <label><input type="radio" name="q1" /> Aucun, le test passe.</label>
+            <label><input type="radio" name="q1" /> L'attendu a été adapté au bug : le test protège désormais le bug au lieu de la règle.</label>
+            <label><input type="radio" name="q1" /> Il manque un commentaire plus détaillé.</label>
+            <p class="explication" hidden>
+              L'attendu d'un test vient de la règle, jamais du code. Ici, on a changé l'attendu pour faire taire un test
+              qui avait raison. C'est la pire forme de test vert.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>2. Une faute injectée (« &gt; » devient « &gt;= » dans la livraison) laisse tous les tests verts. Que faut-il en conclure ?</legend>
+            <label><input type="radio" name="q2" /> Aucun test ne vérifie la limite exacte : il faut ajouter un test à 50 000 F pile.</label>
+            <label><input type="radio" name="q2" /> L'outil d'injection de fautes est cassé.</label>
+            <label><input type="radio" name="q2" /> Le code est forcément correct.</label>
+            <p class="explication" hidden>
+              Un survivant signifie que cette partie du code pourrait changer sans qu'aucun test ne le remarque. Le test qui
+              manque est celui qui se place exactement sur la limite.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>3. Tu demandes à Claude d'écrire les tests d'un module. Quelle consigne est la plus importante ?</legend>
+            <label><input type="radio" name="q3" /> « Fais en sorte que tous les tests passent. »</label>
+            <label><input type="radio" name="q3" /> « Lis bien le code pour écrire des tests qui lui correspondent. »</label>
+            <label><input type="radio" name="q3" /> « Écris les tests à partir des règles, attendus en dur, limites comprises, et ne les modifie pas ensuite pour faire passer le code. »</label>
+            <p class="explication" hidden>
+              Des tests écrits en lisant le code recopient ses bugs. « Fais passer les tests » pousse à modifier les tests.
+              Les règles sont la seule référence indépendante du code.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

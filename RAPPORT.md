@@ -117,4 +117,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   branche `ia/modifier-quantite` : lodash, renommage, stock retiré + test supprimé, mutation, aucune validation ;
   7 tests verts avec lodash), `verifier-invariants.js` (1/11 sur la branche IA, 11/11 sur la correction de référence),
   `grille-relecture.md` (5 points, à réutiliser en 4.6). controle-ia.js (4.2) réutilisé dans l'exercice.
-- Ensuite : leçon 4.5 (tests verts qui ne prouvent rien) puis 4.6 (skills).
+- Leçon 4.5 (tests verts) rédigée. `exercices/m4-05/` : `preparer-exercice.js` (devis + REGLES.md + 7 tests verts
+  contenant les 4 pièges, 4 bugs cachés), `mutants.js` (injection de fautes générique, restaure toujours le fichier).
+  Vérifié : 63 % (6 survivants) sur la suite fournie ; tests écrits d'après REGLES.md → 5 rouges = les 4 bugs ;
+  après correction 14 verts, 68 % (trous restants + mutants équivalents, expliqués dans la leçon).
+- Ensuite : leçon 4.6 (créer ses propres skills), dernière leçon du parcours.

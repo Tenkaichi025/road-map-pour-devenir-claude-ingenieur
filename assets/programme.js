@@ -44,7 +44,7 @@ const PROGRAMME = [
       { id: "m4-02", titre: "Cadrer un prompt et le contexte", pret: true },
       { id: "m4-03", titre: "Découper les tâches", pret: true },
       { id: "m4-04", titre: "Relire et challenger le code", pret: true },
-      { id: "m4-05", titre: "Les tests verts qui ne prouvent rien", pret: false },
+      { id: "m4-05", titre: "Les tests verts qui ne prouvent rien", pret: true },
       { id: "m4-06", titre: "Créer tes propres skills", pret: false },
     ],
   },

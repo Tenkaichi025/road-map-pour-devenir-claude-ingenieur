@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Découper les tâches · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m4-03">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 4.3</p>
+          <h1>Découper les tâches</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            « Fais-moi tout le système de réservation » : c'est le <em>one-shot</em>, une seule demande pour une grosse
+            fonctionnalité. Ça échoue presque toujours, pour trois raisons. Le <strong>contexte explose</strong> : l'IA
+            doit tout tenir en tête à la fois, et elle oublie en route des règles données au début. Elle
+            <strong>invente</strong> pour combler les trous : des horaires, des règles, des fonctions qui n'existent pas.
+            Et tu <strong>perds le contrôle</strong> : 400 lignes d'un coup, c'est impossible à relire, et quand un test
+            casse, impossible de savoir quelle partie est en cause.
+          </p>
+          <p>
+            La stratégie de l'ingénieur : découper en <strong>micro-étapes</strong>. Chaque étape a une seule intention,
+            elle est <strong>testable seule</strong> (ses critères de réussite sont écrits <em>avant</em>), assez petite
+            pour être relue en cinq minutes, et elle laisse le projet dans un état qui marche. On la
+            <strong>commite</strong>, puis on construit la suivante sur une base déjà vérifiée.
+          </p>
+          <p>
+            L'ordre compte : d'abord les données et leur validation, puis les règles simples, puis les interactions entre
+            éléments, puis les règles métier, et en dernier l'interface et le stockage.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Les réservations du terrain de foot à 5 de la Riviera. Un créneau ressemble à
+            <code>{ nom: "Awa", debut: "2026-11-14T18:00", fin: "2026-11-14T19:00" }</code>. Plutôt qu'une demande
+            géante, trois étapes. Chacune a ses <strong>tests d'acceptation</strong>, écrits avant le code, et une
+            commande qui dit si elle est finie : <code>node valider.js 1</code>, <code>2</code> ou <code>3</code>. Chaque
+            commande relance aussi les tests des étapes précédentes.
+          </p>
+
+          <h3>Étape 1 — Données et validation d'un créneau</h3>
+          <pre><code>Étape 1 sur 3 : ne fais que celle-ci.
+Dans src/creneaux.js, écris validerCreneau(creneau) et dureeMinutes(creneau).
+Un créneau : { nom, debut, fin }, dates au format « AAAA-MM-JJTHH:MM » (heure locale).
+Règles : format exact ; date qui existe vraiment (pas de 30 février) ; minutes :00 ou :30 ;
+même jour ; fin après début ; durée de 1 h à 3 h ; nom non vide.
+Chaque règle non respectée : throw new Error("message clair en français").
+Fini quand : node valider.js 1 passe. Ne modifie pas le dossier etapes/.</code></pre>
+          <p>Le piège de cette étape : JavaScript ne refuse pas le 30 février, il le transforme en 2 mars. Il faut le vérifier soi-même :</p>
+          <pre><code>const date = new Date(Date.UTC(annee, mois - 1, jour));
+if (date.getUTCMonth() !== mois - 1 || date.getUTCDate() !== jour) {
+  throw new Error(`Cette date n'existe pas : ${texte.slice(0, 10)}.`);
+}</code></pre>
+          <p><code>node valider.js 1</code> : 10 tests sur 10. On relit le diff (un seul fichier), puis <code>git commit -m "Étape 1 : validation d'un créneau"</code>.</p>
+
+          <h3>Étape 2 — Détection des chevauchements</h3>
+          <pre><code>Étape 2 sur 3. L'étape 1 est faite et commitée : ne la modifie pas.
+Ajoute chevauche(a, b) et ajouterReservation(reservations, creneau).
+Deux créneaux qui se suivent (l'un finit à 19:00, l'autre commence à 19:00)
+ne se chevauchent pas. ajouterReservation valide le créneau (étape 1), refuse
+un chevauchement avec une erreur qui nomme la personne déjà inscrite, et renvoie
+une NOUVELLE liste sans modifier celle reçue.
+Fini quand : node valider.js 2 passe (étapes 1 et 2).</code></pre>
+          <pre><code>// [début, fin[ : un créneau qui finit à 19:00 ne chevauche pas celui qui commence à 19:00.
+function chevauche(a, b) {
+  const [debutA, finA, debutB, finB] = [a.debut, a.fin, b.debut, b.fin].map(lireDate);
+  return debutA.jour === debutB.jour &amp;&amp; debutA.minutes &lt; finB.minutes &amp;&amp; debutB.minutes &lt; finA.minutes;
+}</code></pre>
+          <p>18 tests sur 18, relecture, commit « Étape 2 : chevauchements ».</p>
+
+          <h3>Étape 3 — Les règles métier</h3>
+          <pre><code>Étape 3 sur 3. Ne modifie pas le comportement des étapes 1 et 2.
+Ajoute estOuvert(creneau) : du lundi au vendredi de 16:00 à 23:00, samedi et
+dimanche de 08:00 à 23:00, fermé les jours fériés de src/feries.js. Le créneau
+doit être ENTIÈREMENT dans les heures d'ouverture. ajouterReservation refuse
+un créneau quand le terrain est fermé.
+Fini quand : node valider.js 3 passe (les trois étapes).</code></pre>
+          <p>
+            28 tests sur 28 : la validation, les chevauchements et les horaires, y compris le dimanche 15 novembre,
+            fermé pour la Journée nationale de la paix. Commit « Étape 3 : heures d'ouverture et jours fériés ».
+          </p>
+          <p>
+            Résultat : trois petits commits, chacun relu et testé. Si l'étape 3 avait mal tourné, un
+            <code>git reset --hard</code> vers l'étape 2 suffisait : deux tiers du travail restaient acquis (leçon 4.1).
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 256" role="img" aria-labelledby="schema-43-titre schema-43-desc">
+              <title id="schema-43-titre">Le cycle étape par étape</title>
+              <desc id="schema-43-desc">
+                Un cycle en quatre temps : un prompt ciblé, le test de l'étape, un commit, puis l'étape suivante, et on
+                recommence. Si le test est rouge, on corrige cette étape et on ne passe pas à la suivante. En dessous,
+                les trois étapes du terrain : données et validation, chevauchements, règles métier, avec un commit à
+                chaque étape.
+              </desc>
+              <defs>
+                <marker id="fleche-43" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <rect class="s-cadre" x="0.75" y="1" width="150" height="44" />
+              <text class="s-ui" x="76" y="28" text-anchor="middle">1. Prompt ciblé</text>
+              <rect class="s-boite-contenu" x="169" y="1" width="150" height="44" />
+              <text class="s-ui-laterite" x="244" y="28" text-anchor="middle">2. Test de l'étape</text>
+              <rect class="s-cadre" x="169" y="96" width="150" height="44" />
+              <text class="s-ui" x="244" y="123" text-anchor="middle">3. Commit</text>
+              <rect class="s-cadre" x="0.75" y="96" width="150" height="44" />
+              <text class="s-ui" x="76" y="123" text-anchor="middle">4. Étape suivante</text>
+
+              <line class="s-trait" x1="152" y1="23" x2="166" y2="23" marker-end="url(#fleche-43)" />
+              <line class="s-trait" x1="244" y1="46" x2="244" y2="93" marker-end="url(#fleche-43)" />
+              <line class="s-trait" x1="168" y1="118" x2="154" y2="118" marker-end="url(#fleche-43)" />
+              <line class="s-trait" x1="76" y1="95" x2="76" y2="48" marker-end="url(#fleche-43)" />
+
+              <text class="s-note s-note-laterite" x="160" y="66" text-anchor="middle">rouge : on corrige l'étape,</text>
+              <text class="s-note s-note-laterite" x="160" y="80" text-anchor="middle">on ne passe pas à la suite</text>
+
+              <line class="s-route" x1="20" y1="176" x2="300" y2="176" />
+              <circle class="s-station" cx="40" cy="176" r="7" />
+              <circle class="s-station" cx="160" cy="176" r="7" />
+              <circle class="s-station" cx="280" cy="176" r="7" />
+              <text class="s-ui" x="40" y="202" text-anchor="middle">Étape 1</text>
+              <text class="s-note" x="40" y="218" text-anchor="middle">données</text>
+              <text class="s-ui" x="160" y="202" text-anchor="middle">Étape 2</text>
+              <text class="s-note" x="160" y="218" text-anchor="middle">chevauchements</text>
+              <text class="s-ui" x="280" y="202" text-anchor="middle">Étape 3</text>
+              <text class="s-note" x="280" y="218" text-anchor="middle">règles métier</text>
+              <text class="s-note s-note-laterite" x="160" y="246" text-anchor="middle">un commit à chaque station</text>
+            </svg>
+            <figcaption>
+              Le cycle ne repart que quand le test de l'étape est vert. Chaque station de la route est un point de
+              sauvegarde où revenir si l'étape suivante tourne mal.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>À chaque étape, avant de commiter :</p>
+          <ul class="liste-verif">
+            <li>L'IA n'a fait <strong>que</strong> l'étape demandée. Si elle « anticipe » l'étape suivante, refuse : ce code-là n'a pas encore de tests.</li>
+            <li>Les tests des étapes précédentes passent toujours (<code>node valider.js n</code> les relance). Une étape qui en casse une autre se corrige avant le commit.</li>
+            <li>Les tests d'acceptation n'ont pas été modifiés : <code>git diff --stat</code> ne doit jamais montrer le dossier <code>etapes/</code>.</li>
+            <li>Le diff de l'étape est petit et relisible. S'il dépasse ce que tu peux relire en cinq minutes, l'étape était trop grosse : redécoupe-la.</li>
+            <li>
+              Les dates : l'IA mélange souvent l'heure locale et l'heure UTC. À Abidjan (UTC+0), le bug est invisible. Il
+              apparaît le jour où le serveur tourne dans un autre fuseau. Vérifie aussi les dates impossibles
+              (30 février) et les limites exactes (19:00 contre 19:00).
+            </li>
+            <li>Chaque étape validée est commitée avec un message qui la nomme, <strong>avant</strong> de demander la suivante.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Le one-shot échoue : contexte trop gros, inventions, et un diff impossible à relire.</li>
+            <li>Une bonne étape : une intention, des critères de réussite écrits avant, assez petite pour être relue, et le projet qui marche après.</li>
+            <li>L'ordre : données, règles simples, interactions, règles métier, puis interface et stockage.</li>
+            <li>Le cycle : prompt ciblé → test de l'étape (et des précédentes) → commit → étape suivante.</li>
+            <li>Un test rouge arrête le cycle : on corrige l'étape, on ne passe jamais à la suite sur une base cassée.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            <code>exercices/m4-03/preparer-exercice.js</code> crée le dépôt d'entraînement (hors du cours) :
+            <code>src/creneaux.js</code> vide, les jours fériés, un <code>CLAUDE.md</code>, les tests d'acceptation des
+            trois étapes dans <code>etapes/</code>, et <code>valider.js</code>.
+          </p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>L'étape 1, de bout en bout</h3>
+            <ol>
+              <li>Depuis <code>exercices/m4-03</code> : <code>node preparer-exercice.js C:\exos\terrain</code>. Va dans ce dossier, et lis <code>README.md</code> et <code>CLAUDE.md</code>.</li>
+              <li><code>node valider.js 1</code> : tout est rouge, c'est normal, rien n'est écrit.</li>
+              <li><code>git switch -c ia/reservations</code>, puis donne à Claude Code le prompt de l'étape 1 (section « Exemple concret »).</li>
+              <li><code>node valider.js 1</code>. Puis <code>git diff --stat</code> et <code>git diff</code> : relis tout.</li>
+              <li>Si tout est vert et relu : <code>git add -A</code>, puis <code>git commit -m "Étape 1 : validation d'un créneau"</code>.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 10 tests sur 10 pour l'étape 1, un diff qui ne touche que
+              <code>src/creneaux.js</code>, et un premier commit.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Si <code>valider.js</code> reste rouge sur le « 30 février », relis la section « Exemple concret » : le piège de <code>new Date</code> y est expliqué. Donne à Claude le nom exact du test qui échoue.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>
+                Un <code>git diff --stat</code> correct montre <code>src/creneaux.js</code> et rien d'autre. Si Claude a
+                aussi écrit <code>chevauche</code> ou des horaires d'ouverture, il est allé trop loin : demande-lui de
+                retirer ce qui ne concerne pas l'étape 1. Si le dossier <code>etapes/</code> apparaît dans le diff,
+                refuse, et restaure-le avec <code>git restore etapes/</code>.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Les étapes 2 et 3, avec tes propres prompts</h3>
+            <p>
+              Écris toi-même les prompts des étapes 2 et 3, avec la même forme : le numéro de l'étape, ce qui est déjà
+              fait, les règles, les cas limites, « fini quand », et ce qu'il ne faut pas toucher. Fais tourner le cycle
+              complet pour chacune. À la fin : <code>git log --oneline</code> et <code>git log --stat</code>.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> <code>node valider.js 3</code> passe (28 tests), et l'historique montre
+              trois commits « Étape 1 », « Étape 2 », « Étape 3 », chacun limité à <code>src/creneaux.js</code>.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Pour l'étape 3, précise bien « ENTIÈREMENT dans les heures d'ouverture » : sinon, un créneau 22:30 - 23:30 risque d'être accepté.</p>
+              <p>Si l'étape 3 casse un test de l'étape 1 ou 2, ne commite pas. Montre à Claude le test précis qui échoue.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Les prompts de la section « Exemple concret » sont un bon modèle. Les erreurs fréquentes :</p>
+              <ul>
+                <li>Les créneaux qui se suivent (19:00 / 19:00) comptés comme un chevauchement : il faut un intervalle « [début, fin[ ».</li>
+                <li><code>ajouterReservation</code> qui modifie la liste reçue (<code>push</code>) au lieu d'en renvoyer une nouvelle.</li>
+                <li>Le jour de la semaine calculé avec <code>new Date("2026-11-14")</code> et <code>getDay()</code> : selon le fuseau du serveur, on peut tomber sur la veille. <code>Date.UTC</code> et <code>getUTCDay</code> évitent ce piège.</li>
+                <li>Le jour férié vérifié, mais seulement pour la date de fin, ou pas du tout le dimanche.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Découper une vraie fonctionnalité de ton projet</h3>
+            <p>
+              Choisis une fonctionnalité que tu veux ajouter à un de tes projets (par exemple le suivi de commande de Royal
+              Senteur). Découpe-la en 3 à 5 étapes. Pour chacune, écris <strong>avant</strong> de coder : son intention,
+              ses critères de réussite (les tests), et les fichiers qu'elle a le droit de toucher. Puis réalise la première
+              étape avec le cycle complet.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un plan d'étapes écrit, et la première étape testée et commitée.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Si tu n'arrives pas à écrire les critères de réussite d'une étape, c'est qu'elle est encore floue : redécoupe-la.</li>
+                <li>Tu peux demander à Claude de <em>proposer</em> un découpage. C'est toi qui le valides, en vérifiant que chaque étape est testable seule.</li>
+                <li>Pour mesurer la différence, tu peux aussi essayer, sur une branche jetable, de faire la même fonctionnalité en une seule demande, puis comparer les deux diffs.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="3">
+            <legend>1. Pourquoi demander « tout le système de réservation » en un seul prompt est-il risqué ?</legend>
+            <label><input type="radio" name="q1" /> Parce que l'IA refuse les grosses demandes.</label>
+            <label><input type="radio" name="q1" /> Parce que le code sera plus lent.</label>
+            <label><input type="radio" name="q1" /> Parce que l'IA oublie ou invente des règles, et qu'un énorme diff est impossible à relire et à déboguer.</label>
+            <p class="explication" hidden>
+              Plus la demande est grosse, plus l'IA comble de trous seule. Et plus le résultat est gros, moins tu peux le
+              vérifier. Quand un test casse dans 400 lignes, tu ne sais pas par où commencer.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>2. Qu'est-ce qui fait une bonne étape ?</legend>
+            <label><input type="radio" name="q2" /> Une seule intention, des critères de réussite écrits avant, un diff relisible, et un projet qui marche après.</label>
+            <label><input type="radio" name="q2" /> Le plus de code possible, pour avancer vite.</label>
+            <label><input type="radio" name="q2" /> Une étape par fichier du projet.</label>
+            <p class="explication" hidden>
+              Une étape doit pouvoir être vérifiée seule, puis mise de côté (commitée) en confiance. Sans critères écrits
+              avant, on ne sait pas quand elle est finie.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="2">
+            <legend>3. L'étape 2 est écrite, mais <code>node valider.js 2</code> montre un test de l'étape 1 en échec. Que fais-tu ?</legend>
+            <label><input type="radio" name="q3" /> Je commite l'étape 2, et je corrigerai l'étape 1 plus tard.</label>
+            <label><input type="radio" name="q3" /> Je ne commite pas : l'étape 2 a cassé l'étape 1, on corrige d'abord cette régression.</label>
+            <label><input type="radio" name="q3" /> Je modifie le test de l'étape 1 pour qu'il passe.</label>
+            <p class="explication" hidden>
+              Une régression, c'est un comportement qui marchait et qui ne marche plus. Le cycle s'arrête là : on ne
+              construit jamais l'étape suivante sur une base cassée. Et on ne touche pas aux tests d'acceptation.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

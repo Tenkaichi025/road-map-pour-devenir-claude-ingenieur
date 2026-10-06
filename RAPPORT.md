@@ -108,4 +108,9 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   branches simulées `ia/prompt-flou` — decimal.js, 4 classes, toFixed, 5 tests verts, 3/7 cas limites — et
   `ia/prompt-cadre` — 2 fichiers, 10 tests, 7/7), `controle-ia.js` (dépendances, fichiers, volume, sur-ingénierie,
   conventions, tests modifiés, node --test), `essais-limites.js` (7 cas limites).
-- Ensuite : leçon 4.3 (découper les tâches).
+- Leçon 4.3 (découper les tâches) rédigée. `exercices/m4-03/preparer-exercice.js` : terrain de foot à 5, src/creneaux.js
+  vide, feries.js, CLAUDE.md, tests d'acceptation etapes/etape1-3 (10 + 8 + 10), valider.js <n>. Vérifié avec une
+  solution de référence en 3 versions (0/10 au départ, chaque version valide son étape et échoue à la suivante, 28/28).
+- À réutiliser en 4.5 : mes premiers tests d'acceptation « assert.throws » passaient sur un fichier VIDE (TypeError :
+  fonction absente = « erreur »). Corrigé avec assert.throws(fn, { name: "Error" }).
+- Ensuite : leçon 4.4 (relire et challenger le code).

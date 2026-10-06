@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HTTPS et chiffrement en transit · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m3-04">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 3.4</p>
+          <h1>HTTPS et chiffrement en transit</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Entre ton téléphone et le serveur d'un site, les données traversent beaucoup de mains : le Wi-Fi du maquis,
+            la box, l'opérateur, des routeurs. En <strong>HTTP</strong>, tout circule <strong>en clair</strong>. N'importe
+            quel intermédiaire peut lire les pages, les mots de passe et les cookies de session, et même les modifier en
+            chemin.
+          </p>
+          <p>
+            <strong>HTTPS</strong>, c'est HTTP à l'intérieur d'un tunnel chiffré, construit par le protocole
+            <strong>TLS</strong>. Le serveur présente un <strong>certificat</strong> : une carte d'identité numérique, au
+            nom du site, avec une date d'expiration, signée par une autorité que le navigateur connaît. Le navigateur la
+            vérifie, puis les deux côtés fabriquent une clé secrète commune. Le certificat est gratuit avec Let's
+            Encrypt, et souvent automatique chez les hébergeurs.
+          </p>
+          <p>
+            Le tunnel seul ne suffit pas, il faut trois compléments. <strong>Rediriger</strong> toute visite en HTTP vers
+            HTTPS. Envoyer l'en-tête <strong>HSTS</strong>, qui dit au navigateur de ne plus jamais essayer HTTP pour ce
+            site. Et éviter le <strong>contenu mixte</strong> : une page HTTPS qui charge une image ou un script en
+            <code>http://</code> rouvre une porte en clair.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            L'espace client du pressing « Le Plateau » : une page de connexion, puis le suivi des vêtements. L'IA a fait
+            tourner le site en HTTP <em>et</em> en HTTPS, mais :
+          </p>
+          <ul>
+            <li>une visite en <code>http://</code> reçoit la page en clair, sans redirection ;</li>
+            <li>la page HTTPS charge son logo et son script avec des adresses en <code>http://</code> : c'est du contenu mixte ;</li>
+            <li>aucun en-tête HSTS ;</li>
+            <li>le cookie de session n'a pas l'option <code>Secure</code> : il peut partir en clair ;</li>
+            <li>
+              un petit script client affichait « self-signed certificate ». L'IA l'a « corrigé » avec
+              <code>process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"</code>.
+            </li>
+          </ul>
+
+          <h3>Ce que voit un intermédiaire</h3>
+          <p>
+            Le relais de l'exercice 1 se place entre ton navigateur et ton serveur, <strong>sur ta propre
+            machine</strong>, et affiche ce qui passe. Voici une connexion en HTTP :
+          </p>
+          <pre><code>── navigateur → serveur (209 octets)
+POST /connexion HTTP/1.1
+...
+email=awa%40exemple.ci&amp;motDePasse=mangue-papaye-2026
+
+── serveur → navigateur
+Set-Cookie: session=3qA0u5xdvgFIa7PDXtoiEDrYOYgThVAcxrfbSDl5PAM; HttpOnly; ...</code></pre>
+          <p>Et la même connexion en HTTPS :</p>
+          <pre><code>── navigateur → serveur (177 octets)
+...........j...-c...'..V......".^.....8......*.,.+.0./.....$.#.(.'.
+── serveur → navigateur (1223 octets)
+....P...L....L.1..G7...%..v.B....+.DOWNGRD.../..$..........</code></pre>
+          <p>
+            En HTTPS, l'intermédiaire voit l'adresse du serveur, la quantité de données et le moment des échanges. Il ne
+            voit ni les pages, ni les formulaires, ni les cookies.
+          </p>
+
+          <h3>Le serveur corrigé</h3>
+          <pre><code>// HTTP ne sert plus qu'à rediriger vers HTTPS, en gardant le chemin demandé.
+http.createServer((req, res) =&gt; {
+  res.writeHead(308, { Location: `https://${HOTE}:${PORT_HTTPS}${req.url}` });
+  res.end();
+}).listen(PORT_HTTP, HOTE);
+
+// Toutes les réponses HTTPS envoient HSTS : « pendant 1 an, viens toujours en HTTPS ».
+res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+
+// Le cookie de session ne voyage qu'en HTTPS.
+"Set-Cookie": `session=${session}; HttpOnly; Secure; SameSite=Lax; Path=/`
+
+// Dans la page : des chemins relatifs, qui suivent le protocole de la page.
+&lt;img src="/logo.svg" …&gt;   &lt;script src="/script.js"&gt;&lt;/script&gt;</code></pre>
+          <p>
+            Prudence avec HSTS : une fois l'en-tête reçu, le navigateur <strong>refuse</strong> HTTP pour ce site pendant
+            toute la durée indiquée. Vérifie d'abord que tout ton site (et ses sous-domaines, avec
+            <code>includeSubDomains</code>) fonctionne en HTTPS. C'est aussi pour ça que la démonstration tourne sur
+            <code>127.0.0.1</code> et non sur <code>localhost</code> : les navigateurs ignorent HSTS pour une adresse
+            IP, donc tes autres projets locaux ne seront pas forcés en HTTPS.
+          </p>
+
+          <h3>Le certificat de test, et le bon réflexe côté client</h3>
+          <p>
+            En local, <code>node creer-certificat.js</code> fabrique un certificat <strong>auto-signé</strong> : il n'est
+            signé par aucune autorité. Le navigateur affiche donc un avertissement, et c'est normal pour un test.
+            Jamais en ligne. Côté script, la mauvaise réponse est de couper toutes les vérifications :
+          </p>
+          <pre><code>process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";   // TOUTES les connexions HTTPS du programme acceptent n'importe quel certificat</code></pre>
+          <p>
+            Node affiche d'ailleurs lui-même un avertissement : « <em>makes TLS connections and HTTPS requests
+            insecure</em> ». La bonne réponse : faire confiance à <strong>ce</strong> certificat-là, et à lui seul.
+          </p>
+          <pre><code>https.get("https://127.0.0.1:3443/api/statut", { ca: fs.readFileSync("cert.pem") }, …);</code></pre>
+
+          <h3>Une subtilité en local</h3>
+          <p>
+            Sur ta machine, les navigateurs considèrent <code>127.0.0.1</code> et <code>localhost</code> comme sûrs. Le
+            contenu mixte n'y est donc pas bloqué : la page semble marcher, avec un simple avertissement
+            « Mixed Content » dans la Console. En ligne, le même script en <code>http://</code> serait bloqué. Fie-toi à
+            la Console et au banc de test, pas à l'impression que « ça marche ».
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 330" role="img" aria-labelledby="schema-34-titre schema-34-desc">
+              <title id="schema-34-titre">La poignée de main TLS, en cinq étapes</title>
+              <desc id="schema-34-desc">
+                Le navigateur dit bonjour au serveur, avec les versions de TLS qu'il connaît et des propositions de clés.
+                Le serveur répond bonjour et présente son certificat. Le navigateur vérifie le certificat : le bon nom, pas
+                expiré, signé par une autorité. Les deux côtés calculent une même clé secrète, sans jamais l'envoyer.
+                Ensuite, les données circulent chiffrées, avec du HTTP normal à l'intérieur du tunnel. Sur le Wi-Fi, on
+                voit l'adresse du serveur et la quantité de données, pas les pages, les mots de passe ou les cookies.
+              </desc>
+              <defs>
+                <marker id="fleche-34" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+                <marker id="fleche-34-l" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-laterite" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <text class="s-ui" x="44" y="16" text-anchor="middle">Navigateur</text>
+              <text class="s-ui" x="280" y="16" text-anchor="middle">Serveur</text>
+              <line class="s-repere" x1="40" y1="26" x2="40" y2="270" />
+              <line class="s-repere" x1="280" y1="26" x2="280" y2="270" />
+
+              <text class="s-code" x="160" y="46" text-anchor="middle">1. Bonjour</text>
+              <line class="s-trait" x1="44" y1="54" x2="274" y2="54" marker-end="url(#fleche-34)" />
+              <text class="s-note" x="160" y="70" text-anchor="middle">versions de TLS, propositions de clés</text>
+
+              <text class="s-code" x="160" y="94" text-anchor="middle">2. Bonjour + certificat</text>
+              <line class="s-trait" x1="276" y1="102" x2="46" y2="102" marker-end="url(#fleche-34)" />
+              <text class="s-note" x="160" y="118" text-anchor="middle">« je suis bien 127.0.0.1 », signé</text>
+
+              <text class="s-ui-laterite" x="160" y="144" text-anchor="middle">3. Le navigateur vérifie</text>
+              <text class="s-note" x="160" y="160" text-anchor="middle">bon nom ? pas expiré ? signé par une autorité ?</text>
+              <text class="s-note s-note-laterite" x="160" y="176" text-anchor="middle">sinon : page d'alerte rouge</text>
+
+              <text class="s-code" x="160" y="200" text-anchor="middle">4. Une clé secrète commune</text>
+              <text class="s-note" x="160" y="216" text-anchor="middle">calculée des deux côtés, jamais envoyée</text>
+
+              <text class="s-code s-code-laterite" x="160" y="240" text-anchor="middle">5. Données chiffrées</text>
+              <line class="s-lien" x1="44" y1="250" x2="274" y2="250" marker-end="url(#fleche-34-l)" />
+              <line class="s-lien" x1="276" y1="258" x2="46" y2="258" marker-end="url(#fleche-34-l)" />
+              <text class="s-note" x="160" y="276" text-anchor="middle">du HTTP normal, à l'intérieur du tunnel</text>
+
+              <g class="s-filet"><line x1="0" y1="290" x2="320" y2="290" /></g>
+              <text class="s-note" x="0" y="308">Sur le Wi-Fi, on voit l'adresse du serveur et la quantité</text>
+              <text class="s-note" x="0" y="324">de données. Pas les pages, les mots de passe ni les cookies.</text>
+            </svg>
+            <figcaption>
+              L'étape 3 est celle que <code>NODE_TLS_REJECT_UNAUTHORIZED = "0"</code> supprime : le tunnel reste chiffré,
+              mais tu ne sais plus avec qui tu parles.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Quand l'IA touche à HTTPS, aux certificats ou aux adresses d'un site :</p>
+          <ul class="liste-verif">
+            <li>
+              Jamais <code>NODE_TLS_REJECT_UNAUTHORIZED = "0"</code> ni <code>rejectUnauthorized: false</code>, même « juste
+              en développement » : ce genre de ligne finit toujours en production. La solution : l'option
+              <code>ca</code> (ou <code>NODE_EXTRA_CA_CERTS</code>), ou un certificat correct.
+            </li>
+            <li>Toutes les ressources sont en <code>https://</code> ou en chemin relatif : images, scripts, feuilles de style, polices, cadres, appels d'API, et l'<code>action</code> des formulaires.</li>
+            <li>Une visite en HTTP est redirigée (301 ou 308) vers HTTPS, en gardant le chemin. Test : <code>curl.exe -sI http://ton-site</code>.</li>
+            <li>Les réponses HTTPS envoient <code>Strict-Transport-Security</code> avec un <code>max-age</code> long (au moins 6 mois, souvent 1 an), une fois que tout le site marche en HTTPS.</li>
+            <li>Les cookies de session ont <code>Secure</code>, en plus de <code>HttpOnly</code> et <code>SameSite</code> (leçon 2.4).</li>
+            <li>La clé privée du certificat (<code>cle.pem</code>, <code>*.key</code>) n'est jamais commitée : c'est un secret (leçon 3.3).</li>
+            <li>Si l'hébergeur ou le CDN gère HTTPS, inutile de l'imposer dans le code. Mais vérifie les en-têtes réels du site en ligne : <code>curl.exe -sI https://ton-site</code>.</li>
+            <li>En local, ne conclus pas « pas de contenu mixte » parce que la page s'affiche : lis la Console.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>En HTTP, tout intermédiaire lit et peut modifier ce qui passe. HTTPS chiffre le trajet.</li>
+            <li>Le certificat prouve l'identité du serveur. Désactiver sa vérification, c'est parler à n'importe qui.</li>
+            <li>Les trois compléments : redirection HTTP → HTTPS, en-tête HSTS, aucune ressource en <code>http://</code>.</li>
+            <li>Cookies de session : <code>Secure</code>. Clé privée du certificat : jamais dans git.</li>
+            <li>En local, le navigateur est indulgent : fie-toi à la Console et aux tests, pas à l'apparence.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans <code>exercices/m3-04/</code>. Dans <code>site</code>, commence par
+            <code>node creer-certificat.js</code> (une seule fois), puis lance <code>node serveur.js</code> : HTTP sur le
+            port 3011, HTTPS sur le port 3443. Le navigateur affichera un avertissement pour le certificat de test :
+            clique sur « Paramètres avancés », puis « Continuer vers 127.0.0.1 ». Les outils :
+          </p>
+          <ul>
+            <li><code>node verifier.js</code> (dans <code>site</code>) : le banc de test, 7 points.</li>
+            <li><code>node audit-https.js &lt;dossier&gt;</code> (dans <code>outils</code>) : le premier tri dans n'importe quel projet.</li>
+            <li><code>node relais-observateur.js &lt;port d'écoute&gt; &lt;port du serveur&gt;</code> (dans <code>outils</code>) : montre ce qui passe entre ton navigateur et ton serveur.</li>
+          </ul>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Voir ce qui passe, en HTTP puis en HTTPS</h3>
+            <ol>
+              <li>Le serveur tourne. Dans un deuxième terminal, depuis <code>outils</code> : <code>node relais-observateur.js 4011 3011</code>.</li>
+              <li>Ouvre <code>http://127.0.0.1:4011</code>, et connecte-toi avec un e-mail et un mot de passe inventés. Regarde le terminal du relais.</li>
+              <li>Arrête le relais (<kbd>Ctrl</kbd> + <kbd>C</kbd>), puis relance-le pour HTTPS : <code>node relais-observateur.js 4443 3443</code>. Ouvre <code>https://127.0.0.1:4443</code>, accepte l'avertissement et connecte-toi à nouveau.</li>
+              <li>Ouvre directement <code>https://127.0.0.1:3443</code>. Clique sur l'icône à gauche de l'adresse, puis sur le certificat : lis son nom, son émetteur et sa date d'expiration.</li>
+              <li><kbd>F12</kbd> → Console : lis l'avertissement. Puis onglet Réseau → recharge → première ligne → en-têtes de la réponse : y a-t-il <code>Strict-Transport-Security</code> ?</li>
+              <li>Dans <code>site</code> : <code>node verifier.js</code>, puis <code>node client.js</code>.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> le mot de passe et le cookie lisibles en HTTP, des octets illisibles en
+              HTTPS, un certificat auto-signé au nom de 127.0.0.1, un avertissement « Mixed Content », aucun HSTS,
+              1 réussi sur 7 au banc de test, et un avertissement de Node pour <code>client.js</code>.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Dans le terminal du relais, cherche la ligne qui commence par <code>email=</code>. En HTTPS, cherche ton mot de passe : tu ne le trouveras pas.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li>En HTTP, le relais affiche <code>email=…&amp;motDePasse=…</code> en clair, puis le <code>Set-Cookie</code> de la session. Le Wi-Fi d'un maquis verrait exactement la même chose.</li>
+                <li>En HTTPS, il n'affiche que des octets illisibles. On devine seulement qu'un échange a eu lieu, et sa taille.</li>
+                <li>Le certificat : émis par 127.0.0.1 pour 127.0.0.1. Il s'est signé lui-même, d'où l'avertissement du navigateur.</li>
+                <li>La Console : « Mixed Content: … requested an insecure element 'http://127.0.0.1:3011/logo.svg' ». La page s'affiche quand même, car le navigateur est indulgent en local. En ligne, le script en <code>http://</code> serait bloqué.</li>
+                <li><code>client.js</code> affiche « Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure ».</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire corriger par Claude, puis vérifier</h3>
+            <ol>
+              <li>Copie le dossier <code>site</code> dans un dossier de travail (avec <code>cert.pem</code> et <code>cle.pem</code>). Dans la copie, demande à Claude :</li>
+            </ol>
+            <pre><code>Corrige serveur.js et client.js :
+- le serveur HTTP ne fait plus que rediriger (308) vers HTTPS, en
+  gardant le chemin ;
+- les réponses HTTPS envoient Strict-Transport-Security avec
+  max-age=31536000 ;
+- la page charge ses ressources avec des chemins relatifs ;
+- le cookie de session a l'option Secure ;
+- client.js ne désactive plus la vérification : il fait confiance à
+  cert.pem avec l'option ca.</code></pre>
+            <ol start="2">
+              <li>Relance le serveur, puis <code>node verifier.js</code> et <code>node client.js</code>. Lance aussi <code>node audit-https.js</code> sur ta copie.</li>
+              <li>Vérifie dans le navigateur : <code>http://127.0.0.1:3011</code> doit t'envoyer sur <code>https://127.0.0.1:3443</code>, et la Console ne doit plus afficher « Mixed Content ».</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 7 sur 7 au banc de test, « Code 200 » sans avertissement pour
+              <code>client.js</code>, aucun point d'audit, et la redirection visible dans le navigateur.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Si le banc de test échoue sur « certificat vérifié », c'est que tu as régénéré le certificat dans un seul des deux dossiers : le banc fait confiance au <code>cert.pem</code> de sa copie.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Le code attendu est celui de la section « Exemple concret ». Les fausses corrections à refuser :</p>
+              <ul>
+                <li><code>rejectUnauthorized: false</code> à la place de <code>NODE_TLS_REJECT_UNAUTHORIZED</code> : c'est la même désactivation, limitée à une requête.</li>
+                <li>Les adresses passées de <code>http://127.0.0.1:3011</code> à <code>https://127.0.0.1:3443</code> écrites en dur : ça marche, mais un chemin relatif suit tout seul le protocole et le domaine de la page.</li>
+                <li>HSTS envoyé aussi sur les réponses HTTP : les navigateurs l'y ignorent. Il doit être sur les réponses HTTPS.</li>
+                <li>La redirection qui renvoie toujours vers <code>/</code> : le visiteur perd la page qu'il demandait.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>L'état HTTPS de ton site en ligne</h3>
+            <p>
+              Fais le bilan de <strong>ton</strong> site en ligne (par exemple Royal Senteur) et de son code. Vérifie la
+              redirection, HSTS, les cookies, le contenu mixte et le certificat. Rédige un bilan, puis une demande de
+              correction pour Claude ou pour ton hébergeur.
+            </p>
+            <pre><code>curl.exe -sI http://ton-site.ci          # redirection ? (301 ou 308, Location en https://)
+curl.exe -sI https://ton-site.ci         # Strict-Transport-Security ? Set-Cookie avec Secure ?
+node audit-https.js C:\chemin\vers\ton-projet</code></pre>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un bilan en 5 points (redirection, HSTS, cookies, contenu mixte,
+              certificat), et la liste des corrections à faire.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Pour le contenu mixte, ouvre chaque page importante avec la Console ouverte : en ligne, les avertissements « Mixed Content » ne trompent pas.</li>
+                <li>Pour le certificat : clique sur le cadenas. Qui l'a émis ? Quand expire-t-il ? Est-il renouvelé automatiquement ?</li>
+                <li>Beaucoup d'hébergeurs (Vercel, Netlify, Cloudflare…) proposent la redirection et HSTS en une case à cocher.</li>
+                <li>Ne teste que tes propres sites.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Tu te connectes à un site en HTTPS sur le Wi-Fi d'un maquis. Que peut voir le gérant du Wi-Fi ?</legend>
+            <label><input type="radio" name="q1" /> Tout : la page, ton mot de passe, tes cookies.</label>
+            <label><input type="radio" name="q1" /> L'adresse du serveur et la quantité de données échangées, mais pas leur contenu.</label>
+            <label><input type="radio" name="q1" /> Rien du tout, pas même l'adresse du site.</label>
+            <p class="explication" hidden>
+              HTTPS chiffre le contenu : pages, formulaires, cookies. Mais les intermédiaires savent toujours à quel
+              serveur tu parles, et combien de données passent.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. Un script Node affiche « self-signed certificate ». L'IA ajoute <code>NODE_TLS_REJECT_UNAUTHORIZED = "0"</code>. Que fais-tu ?</legend>
+            <label><input type="radio" name="q2" /> J'accepte : c'est seulement pour le développement.</label>
+            <label><input type="radio" name="q2" /> J'accepte, si je supprime la ligne avant la mise en ligne.</label>
+            <label><input type="radio" name="q2" /> Je refuse : je fais confiance au bon certificat avec l'option <code>ca</code>, ou je corrige le certificat.</label>
+            <p class="explication" hidden>
+              Cette ligne coupe la vérification pour toutes les connexions HTTPS du programme : n'importe qui pourrait se
+              faire passer pour le serveur. Et ce genre de ligne « temporaire » finit presque toujours en production.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. À quoi sert l'en-tête <code>Strict-Transport-Security</code> (HSTS) ?</legend>
+            <label><input type="radio" name="q3" /> Le navigateur n'essaie plus jamais HTTP pour ce site pendant la durée indiquée, même si on tape <code>http://</code>.</label>
+            <label><input type="radio" name="q3" /> Il chiffre les données de la page.</label>
+            <label><input type="radio" name="q3" /> Il remplace le certificat.</label>
+            <p class="explication" hidden>
+              Sans HSTS, la toute première visite en <code>http://</code> passe en clair avant la redirection : un
+              intermédiaire peut l'intercepter. Avec HSTS, le navigateur passe directement en HTTPS, sans jamais faire
+              cette première requête en clair.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

@@ -44,6 +44,9 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   « relire les notes après déconnexion ». Corrigé : corps vide = `{}`.
 - Leçons de sécurité : deux réponses interrompues par un filtre de sécurité (3.1, 3.2). Règle adoptée avec Wilfried :
   cours 100 % défensifs (audit, correction, preuve), marqueurs inoffensifs, aucune charge d'attaque ni contournement.
+- Démo HTTPS sur 127.0.0.1 et pas localhost : HSTS est ignoré pour une IP (sinon risque de forcer HTTPS sur les autres
+  projets locaux). En local, Chrome tolère le contenu mixte (127.0.0.1 « sûr ») : seul l'avertissement de la Console
+  le montre ; écrit tel quel dans la leçon.
 - Chrome headless ne descend pas sous 500 px de large → tests mobiles via une iframe de 375 px.
 - Exercice « page qui déborde » : une longue URL ne débordait pas (Chrome coupe après les « / ») → cause
   remplacée par `white-space: nowrap` sur le titre. Leçon : toujours vérifier qu'un bug « pédagogique » se produit vraiment.
@@ -87,4 +90,9 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   .env.example, historique git ; secrets masqués), `outils/preparer-depot.js` (dépôt d'entraînement hors du cours).
   Clés FICTIVES au préfixe `smsci_live_` (pas de vrai format, pour ne pas déclencher la push protection de GitHub).
   Testé : version corrigée (refus sans .env, 201 avec), git log -S, git filter-repo → ***REMOVED***, audit à 0.
-- Ensuite : leçon 3.4 (HTTPS).
+- Leçon 3.4 (HTTPS) rédigée. `exercices/m3-04/site` (HTTP 3011 + HTTPS 3443 sur 127.0.0.1, certificat auto-signé via
+  `creer-certificat.js` et openssl de Git ; pas de redirection, contenu mixte, pas de HSTS, cookie sans Secure,
+  `client.js` avec NODE_TLS_REJECT_UNAUTHORIZED=0), `site/verifier.js` (7 tests : 1/7 fourni, 7/7 corrigé ; certificat
+  vérifié avec l'option ca), `outils/audit-https.js`, `outils/relais-observateur.js` (montre HTTP en clair / HTTPS
+  illisible, sur son propre trafic, écoute sur 127.0.0.1 seulement).
+- Ensuite : leçon 3.5 (droits d'accès).

@@ -6,3 +6,6 @@
 
 # Cookies enregistrés par curl pendant les exercices
 cookies-*.txt
+
+# Certificats de test (dont la clé privée)
+*.pem

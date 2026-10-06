@@ -1,0 +1,4 @@
+body { font-family: Georgia, serif; max-width: 30rem; margin: 2rem auto; padding: 0 1rem; background: #f7f1e6; color: #1f1f1f; }
+label { display: block; font-weight: bold; margin-top: 0.7rem; }
+input { width: 100%; padding: 0.5rem; font-size: 1rem; box-sizing: border-box; }
+button { margin-top: 0.8rem; padding: 0.5rem 1rem; font-size: 1rem; }

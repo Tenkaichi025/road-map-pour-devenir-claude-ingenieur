@@ -100,4 +100,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   sans rôle), `factures/verifier.js` (10 tests à deux comptes étanches + admin : 5/10 fourni, 10/10 corrigé),
   `outils/audit-autorisations.js` (2 fausses alertes restantes après correction : id venu de la session).
   **Module 3 terminé.**
-- Ensuite : module 4 (Ingénieur Claude).
+- Module 4 en cours : leçon 4.1 (Git) rédigée. `exercices/m4-01/preparer-exercice.js` crée un dépôt d'entraînement hors
+  du cours : projet devis/livraison (tests `node --test`), branche `ia/remise-fidelite` avec un commit fourre-tout qui
+  change l'arrondi de la livraison ET l'attendu du test (6/6 verts), travail en cours non commité dans le README (stash).
+  Déroulé complet testé (stash, diff --stat, restore --source, merge, stash pop, reset --hard).
+- Ensuite : leçon 4.2 (cadrer un prompt et le contexte).

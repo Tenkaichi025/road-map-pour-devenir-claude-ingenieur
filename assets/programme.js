@@ -40,7 +40,7 @@ const PROGRAMME = [
     titre: "Ingénieur Claude",
     sousTitre: "Piloter l'IA et valider son travail",
     lecons: [
-      { id: "m4-01", titre: "Git, ton filet de sécurité", pret: false },
+      { id: "m4-01", titre: "Git, ton filet de sécurité", pret: true },
       { id: "m4-02", titre: "Cadrer un prompt et le contexte", pret: false },
       { id: "m4-03", titre: "Découper les tâches", pret: false },
       { id: "m4-04", titre: "Relire et challenger le code", pret: false },

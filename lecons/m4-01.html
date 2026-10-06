@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Git, ton filet de sécurité · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m4-01">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 4.1</p>
+          <h1>Git, ton filet de sécurité</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            L'IA modifie vite, et beaucoup. Git est ta machine à remonter le temps : tant qu'un état du projet est
+            <strong>commité</strong>, tu peux y revenir, quoi que l'IA fasse ensuite. Laisser l'IA travailler sans
+            commit, c'est faire du trapèze sans filet.
+          </p>
+          <p>
+            Trois habitudes changent tout. Des <strong>commits atomiques</strong> : un commit = une intention, petit,
+            avec un message qui dit ce qui a vraiment changé. On peut alors annuler une chose sans tout annuler. Une
+            <strong>branche</strong> pour l'IA : elle travaille sur <code>ia/…</code>, et <code>main</code> ne reçoit que
+            ce que tu as vérifié. Et un <strong>point de départ propre</strong> : avant de lancer l'IA, ton travail en
+            cours est commité, ou mis de côté avec <code>git stash</code>.
+          </p>
+          <p>
+            Après le passage de l'IA, deux contrôles avant de fusionner : <code>git diff main --stat</code> (quels
+            fichiers ont bougé, et est-ce justifié ?) et les tests. Si ça ne va pas, la branche part à la poubelle.
+            Main, lui, n'a jamais été touché.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Un petit projet Node.js qui calcule des devis et des frais de livraison à Abidjan, avec ses tests. Tu
+            demandes à l'IA d'ajouter une <strong>remise fidélité</strong> de 10 %. Elle travaille sur la branche
+            <code>ia/remise-fidelite</code>, et livre un seul commit : « Ajoute la remise fidélité et quelques
+            améliorations ». Les tests sont tous verts :
+          </p>
+          <pre><code>node --test
+ℹ pass 6
+ℹ fail 0</code></pre>
+          <p>Tout va bien ? Regarde quels fichiers ont bougé par rapport à main :</p>
+          <pre><code>git diff main --stat
+ README.md               | 16 +++++++++++++---
+ src/devis.js            |  8 +++++---
+ src/livraison.js        |  6 +++---        ← tu n'as rien demandé sur la livraison
+ src/remise.js           |  6 ++++++
+ tests/livraison.test.js |  4 ++--          ← ni sur ses tests
+ tests/remise.test.js    | 11 +++++++++++</code></pre>
+          <p>Le détail de <code>src/livraison.js</code> et de son test :</p>
+          <pre><code>git diff main -- src/livraison.js tests/livraison.test.js
+-  return Math.ceil((base + supplement) / 100) * 100;
++  return Math.round((base + supplement) / 100) * 100;
+-  assert.equal(fraisLivraison("Plateau", 7.2), 2000);
++  assert.equal(fraisLivraison("Plateau", 7.2), 1900);</code></pre>
+          <p>
+            L'IA a « simplifié » l'arrondi des frais de livraison (à la centaine <em>la plus proche</em> au lieu de la
+            centaine <em>supérieure</em>). Puis, voyant le test échouer, elle a <strong>changé la valeur attendue du
+            test</strong>. Chaque livraison lourde te rapporterait désormais 100 F de moins, et les tests restent verts.
+            Seul le <code>--stat</code> l'a trahie.
+          </p>
+
+          <h3>Garder le bon, jeter le reste</h3>
+          <p>
+            La remise elle-même est bonne. On la récupère seule, sur une branche propre, en prenant uniquement les
+            fichiers voulus dans la branche de l'IA :
+          </p>
+          <pre><code>git switch main
+git switch -c remise-propre
+git restore --source ia/remise-fidelite -- src/remise.js tests/remise.test.js src/devis.js
+node --test                                   # 6 tests verts, avec l'arrondi d'origine
+git add -A
+git commit -m "Ajoute la remise fidélité"     # un commit, une intention, 3 fichiers
+git switch main
+git merge remise-propre
+git branch -D ia/remise-fidelite remise-propre</code></pre>
+
+          <h3>Les commandes du filet</h3>
+          <div class="tableau">
+            <table>
+              <thead><tr><th>Commande</th><th>À quoi elle sert</th></tr></thead>
+              <tbody>
+                <tr><td><code>git status</code></td><td>Voir ce qui n'est pas commité. Doit être propre avant de lancer l'IA.</td></tr>
+                <tr><td><code>git stash push -m "…"</code></td><td>Mettre ton travail en cours de côté. <code>git stash pop</code> le ramène.</td></tr>
+                <tr><td><code>git tag avant-ia</code></td><td>Poser un repère sur l'état actuel, pour y revenir facilement.</td></tr>
+                <tr><td><code>git switch -c ia/…</code></td><td>Créer la branche de travail de l'IA.</td></tr>
+                <tr><td><code>git diff main --stat</code></td><td>La liste des fichiers modifiés par rapport à main.</td></tr>
+                <tr><td><code>git restore --source &lt;branche&gt; -- &lt;fichiers&gt;</code></td><td>Prendre seulement certains fichiers d'une autre branche.</td></tr>
+                <tr><td><code>git reset --hard avant-ia</code></td><td>Revenir exactement au repère. <strong>Efface</strong> tout ce qui a été fait depuis, commité ou non.</td></tr>
+                <tr><td><code>git revert &lt;commit&gt;</code></td><td>Annuler un commit <strong>déjà poussé</strong>, en ajoutant un commit inverse. L'historique partagé reste intact.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            <code>git reset --hard</code> est le bouton « tout effacer » : parfait sur une branche d'essai locale,
+            dangereux partout ailleurs. Sur ce qui a déjà été poussé et partagé, on ne réécrit pas l'histoire : on
+            utilise <code>git revert</code>.
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 254" role="img" aria-labelledby="schema-41-titre schema-41-desc">
+              <title id="schema-41-titre">Le travail de l'IA sur une branche à part</title>
+              <desc id="schema-41-desc">
+                La branche main avance de commit en commit. On pose un repère avant-ia, puis une branche part de ce
+                point : l'IA y fait ses commits. Si les tests et la liste des fichiers modifiés sont bons, la branche
+                est fusionnée dans main. Avant : un état propre, avec git status, un commit ou git stash, puis git
+                switch -c ia. Si ça ne va pas : git reset --hard avant-ia, ou supprimer la branche.
+              </desc>
+
+              <text class="s-note" x="0" y="14">main : seulement ce que tu as vérifié</text>
+              <text class="s-note" x="318" y="14" text-anchor="end">fusion</text>
+              <line class="s-route" x1="10" y1="40" x2="306" y2="40" />
+              <path class="s-lien" d="M120 40 C150 40 150 110 180 110 H258" />
+              <path class="s-trait" d="M258 110 C284 110 284 40 300 40" />
+              <circle class="s-station" cx="20" cy="40" r="7" />
+              <circle class="s-station" cx="70" cy="40" r="7" />
+              <circle class="s-station" cx="120" cy="40" r="7" />
+              <circle class="s-station" cx="300" cy="40" r="7" />
+              <circle class="s-laterite" cx="190" cy="110" r="6" />
+              <circle class="s-laterite" cx="230" cy="110" r="6" />
+              <text class="s-note" x="120" y="66" text-anchor="middle">tag avant-ia</text>
+              <text class="s-note" x="266" y="80" text-anchor="end">tests ✓</text>
+              <text class="s-note" x="266" y="94" text-anchor="end">diff --stat ✓</text>
+              <text class="s-note s-note-laterite" x="210" y="134" text-anchor="middle">branche ia/… : les commits de l'IA</text>
+
+              <g class="s-filet"><line x1="0" y1="156" x2="320" y2="156" /></g>
+              <text class="s-ui" x="0" y="178">Avant</text>
+              <text class="s-note" x="0" y="196">git status propre (commit ou git stash), git switch -c ia/…</text>
+              <text class="s-ui-laterite" x="0" y="222">Si ça ne va pas</text>
+              <text class="s-note" x="0" y="240">git reset --hard avant-ia, ou git branch -D ia/…</text>
+            </svg>
+            <figcaption>
+              L'IA n'écrit jamais directement sur main. Sa branche est un brouillon : on en garde ce qui est vérifié, et
+              on jette le reste sans regret.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Avant, pendant et après le passage de l'IA :</p>
+          <ul class="liste-verif">
+            <li>Avant de lancer l'IA : <code>git status</code> est propre (travail commité ou mis de côté), et tu es sur une branche <code>ia/…</code>.</li>
+            <li>Refuse les commits « fourre-tout » (« quelques améliorations », « divers correctifs ») : un commit = une intention, avec un message qui dit ce qui a changé.</li>
+            <li><code>git diff main --stat</code> : <strong>chaque</strong> fichier listé doit être justifié par ta demande. Un fichier inattendu, c'est une modification non demandée.</li>
+            <li>Un test dont la valeur attendue a changé, alors que ta demande ne le justifie pas : alerte rouge. L'IA a pu « réparer » le test au lieu du code (leçon 4.5).</li>
+            <li>Les tests passent sur la branche <strong>avant</strong> la fusion, et encore après.</li>
+            <li>
+              L'IA ne lance aucune commande destructrice sans ton accord : <code>git reset --hard</code>,
+              <code>git push --force</code>, <code>git clean -fd</code>, <code>git checkout -- .</code>. Dans Claude Code,
+              garde la demande de permission pour ces commandes.
+            </li>
+            <li>Rien de ce qui a été poussé et partagé n'est réécrit : <code>git revert</code>, jamais <code>reset</code> suivi d'un <code>push --force</code> sur main.</li>
+            <li>Aucun fichier en trop dans les commits : secrets, <code>node_modules</code>, bases de données, fichiers générés (<code>git add -A</code> prend tout).</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Ce qui est commité est récupérable. Avant de lancer l'IA : un état propre et un repère (<code>git tag</code>).</li>
+            <li>L'IA travaille sur une branche <code>ia/…</code>. Main ne reçoit que ce que tu as vérifié.</li>
+            <li>Des commits atomiques : une intention par commit. Refuse les « fourre-tout ».</li>
+            <li><code>git diff main --stat</code> révèle les modifications non demandées, même quand les tests sont verts.</li>
+            <li><code>reset --hard</code> pour jeter un brouillon local, <code>revert</code> pour annuler ce qui est déjà partagé.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Le script <code>exercices/m4-01/preparer-exercice.js</code> crée un dépôt d'entraînement <strong>en dehors du
+            cours</strong> : le projet de devis, une branche <code>ia/remise-fidelite</code>, et un travail en cours non
+            commité. Lance les tests avec <code>node --test</code>.
+          </p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Démasquer le commit fourre-tout, et garder le bon</h3>
+            <ol>
+              <li>Depuis <code>exercices/m4-01</code> : <code>node preparer-exercice.js C:\exos\devis-livraison</code>. Puis va dans ce dossier.</li>
+              <li><code>git status</code>, puis <code>git log --oneline --all</code>, puis <code>node --test</code>.</li>
+              <li>Essaie <code>git switch ia/remise-fidelite</code>. Git refuse : lis pourquoi. Mets ton travail de côté avec <code>git stash push -m "mon travail en cours"</code>, puis change de branche.</li>
+              <li><code>node --test</code>, puis <code>git diff main --stat</code>. Quels fichiers n'ont rien à voir avec une remise ?</li>
+              <li>Lis le détail : <code>git diff main -- src/livraison.js tests/livraison.test.js</code>.</li>
+              <li>Récupère seulement la remise sur une branche propre, en suivant la section « Garder le bon, jeter le reste ».</li>
+              <li>De retour sur main, après la fusion : <code>git stash pop</code>. Ton travail en cours est revenu ?</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 6 tests verts sur la branche de l'IA, 3 fichiers non demandés repérés,
+              un commit propre de 3 fichiers sur main, l'arrondi d'origine conservé (6 tests verts), et ton TODO revenu
+              dans le README.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Le message de Git, au moment de changer de branche : « Your local changes to the following files would be overwritten ». Le README est modifié à la fois par toi et par la branche de l'IA.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li><code>git switch</code> refuse, car ton README modifié serait écrasé. <code>git stash</code> le met de côté, sans rien perdre.</li>
+                <li>Sur la branche de l'IA : 6 tests verts. Mais <code>--stat</code> montre <code>src/livraison.js</code>, <code>tests/livraison.test.js</code> et <code>README.md</code> : rien de cela n'a été demandé.</li>
+                <li>Le diff : <code>Math.ceil</code> remplacé par <code>Math.round</code>, et l'attendu du test changé de 2000 en 1900 pour rester vert. 100 F perdus sur chaque colis concerné, sans aucune alerte.</li>
+                <li>Après <code>git restore --source …</code>, le commit « Ajoute la remise fidélité » ne contient que <code>src/devis.js</code>, <code>src/remise.js</code> et <code>tests/remise.test.js</code>. Les tests restent verts, avec l'attendu d'origine (2000).</li>
+                <li><code>git stash pop</code> ramène la ligne « TODO : ajouter Grand-Bassam aux communes livrées ».</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire travailler Claude sur une branche, et décider</h3>
+            <ol>
+              <li>Dans le dépôt d'entraînement, sur main, avec un <code>git status</code> propre : <code>git tag avant-ia</code>, puis <code>git switch -c ia/livraison-express</code>.</li>
+              <li>Ouvre Claude Code dans ce dossier et demande :</li>
+            </ol>
+            <pre><code>Ajoute une option « livraison express » : les frais de livraison
+sont majorés de 50 %, puis arrondis à la centaine supérieure.
+Ne modifie que src/livraison.js et tests/livraison.test.js.
+Ajoute au moins deux tests. Fais un commit pour le code et un
+commit pour les tests, avec des messages précis.</code></pre>
+            <ol start="3">
+              <li>Contrôle : <code>git log --oneline main..</code>, <code>git diff main --stat</code>, <code>git diff main</code>, <code>node --test</code>.</li>
+              <li>Décide. Si tout est conforme : <code>git switch main</code>, puis <code>git merge ia/livraison-express</code>. Sinon : <code>git reset --hard avant-ia</code> sur la branche, et recommence avec une demande plus précise.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> deux commits aux messages précis, seulement les deux fichiers autorisés,
+              les anciens tests inchangés et verts, au moins deux nouveaux tests, et une décision argumentée (fusion ou
+              retour au repère).
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Pour vérifier que les anciens tests n'ont pas été modifiés : dans <code>git diff main -- tests/livraison.test.js</code>, il ne doit y avoir que des lignes ajoutées (<code>+</code>), aucune ligne retirée (<code>-</code>).</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Points à contrôler, et réactions possibles :</p>
+              <ul>
+                <li>Un seul commit au lieu de deux : demande de le découper (ou accepte, si le diff est petit et propre : la règle sert la relecture, pas l'inverse).</li>
+                <li>Un fichier hors liste dans <code>--stat</code> : refuse, et répète la contrainte.</li>
+                <li>Un ancien test modifié : refuse sans discuter. La demande ne justifie aucun changement des tests existants.</li>
+                <li>Vérifie un calcul toi-même : Plateau, 2 kg, en express → 1500 × 1,5 = 2250 → 2300 après l'arrondi à la centaine supérieure. Un test qui attend 2250 serait faux.</li>
+              </ul>
+              <p><code>git reset --hard avant-ia</code> n'efface que la branche d'essai : main n'a jamais bougé.</p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Le contrat Git de ton projet</h3>
+            <p>
+              Dans un de tes projets, écris une section « Git » dans son <code>CLAUDE.md</code> : branche
+              <code>ia/…</code> obligatoire, un commit par étape, messages précis, fichiers autorisés, tests existants
+              intouchables sans accord, aucune commande destructrice ni <code>push</code> sans ta permission. Puis
+              applique ce contrat à ta prochaine vraie fonctionnalité, de la branche jusqu'à la fusion.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> une section « Git » dans ton <code>CLAUDE.md</code>, et l'historique
+              (<code>git log --oneline --graph</code>) d'une vraie fonctionnalité menée selon ce contrat.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Le <code>CLAUDE.md</code> est lu par Claude Code à chaque session : c'est là que tes règles de travail ont le plus d'effet (on y revient en 4.2).</li>
+                <li>Dans les réglages de Claude Code, tu peux exiger une confirmation pour certaines commandes, comme <code>git push</code>.</li>
+                <li>Prends l'habitude de lire <code>git diff --stat</code> avant chaque fusion, même pour une petite modification.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="1">
+            <legend>1. Tu as demandé une remise, les tests sont verts. Quelle commande te montre, en une ligne par fichier, tout ce que l'IA a modifié ?</legend>
+            <label><input type="radio" name="q1" /> <code>git diff main --stat</code></label>
+            <label><input type="radio" name="q1" /> <code>git status</code></label>
+            <label><input type="radio" name="q1" /> <code>node --test</code></label>
+            <p class="explication" hidden>
+              <code>git status</code> ne montre que ce qui n'est pas commité, et les tests ne disent rien des fichiers
+              touchés. <code>git diff main --stat</code> liste chaque fichier modifié par rapport à main, avec le nombre
+              de lignes changées.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. Tu as du travail non commité, et Git refuse de passer sur la branche de l'IA. Que fais-tu ?</legend>
+            <label><input type="radio" name="q2" /> <code>git reset --hard</code>, puis je change de branche.</label>
+            <label><input type="radio" name="q2" /> Je supprime mes modifications à la main.</label>
+            <label><input type="radio" name="q2" /> <code>git stash push</code>, je change de branche, et <code>git stash pop</code> au retour.</label>
+            <p class="explication" hidden>
+              <code>git stash</code> met ton travail de côté sans rien perdre. <code>git reset --hard</code> l'effacerait
+              définitivement : ce qui n'a jamais été commité ne se récupère pas.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="2">
+            <legend>3. Un mauvais commit de l'IA a déjà été poussé sur GitHub, et ton collègue a récupéré le dépôt. Comment l'annuler ?</legend>
+            <label><input type="radio" name="q3" /> <code>git reset --hard</code> sur le commit précédent, puis <code>git push --force</code>.</label>
+            <label><input type="radio" name="q3" /> <code>git revert</code> : un nouveau commit qui annule le mauvais, sans réécrire l'historique.</label>
+            <label><input type="radio" name="q3" /> Supprimer le dépôt et le recréer.</label>
+            <p class="explication" hidden>
+              Réécrire un historique partagé casse le dépôt de tous ceux qui l'ont récupéré. <code>git revert</code>
+              ajoute simplement un commit inverse : tout le monde peut le récupérer normalement.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

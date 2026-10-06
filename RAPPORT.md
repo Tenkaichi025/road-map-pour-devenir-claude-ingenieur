@@ -46,5 +46,6 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` (dans `.env`, ignoré par git ; modèle dans `.env.example`).
 
 ## État actuel & Prochaines étapes
-- Étapes 1-3 terminées. Module 1 en attente de validation.
-- Ensuite : script de narration de la vidéo 1.1 (`video/scripts/m1-01.md`), relu avant toute génération.
+- Étapes 1-3 terminées et validées (module 1).
+- Script vidéo 1.1 rédigé (`video/scripts/m1-01.md`, ~675 mots ≈ 5 min, ~3 800 caractères) + `video/prononciation.json`. En relecture par Wilfried.
+- Ensuite : outillage Remotion + `video/tts.mjs`, puis génération de la vidéo test après accord.

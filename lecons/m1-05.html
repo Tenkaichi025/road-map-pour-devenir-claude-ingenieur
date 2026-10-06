@@ -76,6 +76,64 @@ formater(m.temperature)    // la clé s'appelle « temp », pas « temperature �
             <li><code>404</code> ou <code>ERR_FILE_NOT_FOUND</code> dans Réseau : un mauvais chemin de fichier.</li>
           </ul>
 
+                    <figure class="schema">
+            <svg viewBox="0 0 320 330" role="img" aria-labelledby="schema-15-titre schema-15-desc">
+              <title id="schema-15-titre">La méthode de diagnostic et l'outil à ouvrir selon le symptôme</title>
+              <desc id="schema-15-desc">
+                La méthode en quatre étapes : observer, localiser, vérifier, corriger. Puis, selon ce que tu vois : page
+                sans style ou image manquante, ouvre l'onglet Réseau et cherche une ligne rouge. Un clic qui ne fait rien,
+                ouvre la Console pour lire l'erreur et sa ligne. « undefined » à l'écran, ouvre la Console et tape la
+                variable. Un bloc mal placé ou qui déborde, ouvre l'onglet Éléments. Un résultat faux sans aucune erreur,
+                compare avec une valeur connue, par exemple 0 °C = 32 °F.
+              </desc>
+
+              <line class="s-route" x1="8" y1="14" x2="312" y2="14" />
+              <circle class="s-station" cx="8" cy="14" r="7" />
+              <circle class="s-station" cx="119" cy="14" r="7" />
+              <circle class="s-station" cx="206" cy="14" r="7" />
+              <circle class="s-station" cx="312" cy="14" r="7" />
+              <text class="s-etape" x="0" y="42">OBSERVER</text>
+              <text class="s-etape" x="119" y="42" text-anchor="middle">LOCALISER</text>
+              <text class="s-etape" x="206" y="42" text-anchor="middle">VÉRIFIER</text>
+              <text class="s-etape" x="320" y="42" text-anchor="end">CORRIGER</text>
+
+              <text class="s-note" x="0" y="74">si tu vois…</text>
+              <text class="s-note" x="202" y="74">ouvre…</text>
+              <g class="s-filet"><line x1="0" y1="82" x2="320" y2="82" /></g>
+              <text class="s-corps" x="0" y="103">La page n'a pas de style,</text>
+              <text class="s-corps" x="0" y="119">ou une image manque</text>
+              <text class="s-ui-laterite" x="182" y="110">→</text>
+              <text class="s-ui-laterite" x="202" y="104">Réseau</text>
+              <text class="s-note" x="202" y="120">une ligne rouge</text>
+              <g class="s-filet"><line x1="0" y1="130" x2="320" y2="130" /></g>
+              <text class="s-corps" x="0" y="158">Un clic ne fait rien</text>
+              <text class="s-ui-laterite" x="182" y="158">→</text>
+              <text class="s-ui-laterite" x="202" y="152">Console</text>
+              <text class="s-note" x="202" y="168">erreur + ligne</text>
+              <g class="s-filet"><line x1="0" y1="178" x2="320" y2="178" /></g>
+              <text class="s-corps" x="0" y="206">« undefined » s'affiche</text>
+              <text class="s-ui-laterite" x="182" y="206">→</text>
+              <text class="s-ui-laterite" x="202" y="200">Console</text>
+              <text class="s-note" x="202" y="216">tape la variable</text>
+              <g class="s-filet"><line x1="0" y1="226" x2="320" y2="226" /></g>
+              <text class="s-corps" x="0" y="247">Un bloc est mal placé</text>
+              <text class="s-corps" x="0" y="263">ou déborde</text>
+              <text class="s-ui-laterite" x="182" y="254">→</text>
+              <text class="s-ui-laterite" x="202" y="248">Éléments</text>
+              <text class="s-note" x="202" y="264">boîtes et styles</text>
+              <g class="s-filet"><line x1="0" y1="274" x2="320" y2="274" /></g>
+              <text class="s-corps" x="0" y="295">Résultat faux,</text>
+              <text class="s-corps" x="0" y="311">aucune erreur nulle part</text>
+              <text class="s-ui-laterite" x="182" y="302">→</text>
+              <text class="s-ui-laterite" x="202" y="296">Valeur connue</text>
+              <text class="s-note" x="202" y="312">0 °C = 32 °F</text>
+              <g class="s-filet"><line x1="0" y1="322" x2="320" y2="322" /></g>
+            </svg>
+            <figcaption>
+              En haut, la méthode. En bas, le premier outil à ouvrir selon ce que tu observes. Le dernier cas est le plus
+              piégeux : aucun outil ne le signale, seule une valeur dont tu connais la réponse le révèle.
+            </figcaption>
+          </figure>
           <h3>Le rapport de bug pour l'IA</h3>
           <p>« Ça marche pas, corrige » oblige l'IA à deviner. Donne-lui plutôt ceci :</p>
           <pre><code>Ce que je fais : j'ouvre index.html dans Chrome.

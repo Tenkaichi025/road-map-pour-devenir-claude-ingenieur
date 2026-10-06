@@ -506,8 +506,7 @@ progress::-moz-progress-bar {
   color: var(--gris);
 }
 /* Un liseré couleur papier autour du texte : il reste lisible quand une ligne le traverse. */
-.s-texte,
-.s-note {
+.schema text {
   paint-order: stroke;
   stroke: var(--papier);
   stroke-width: 4px;
@@ -542,6 +541,72 @@ progress::-moz-progress-bar {
 .s-lien {
   stroke: var(--laterite);
   stroke-width: 2;
+}
+.schema .s-sans-halo {
+  stroke: none;
+}
+.s-ui,
+.s-ui-laterite {
+  fill: var(--encre);
+  font: 700 14px var(--titre);
+  font-stretch: 85%;
+}
+.s-ui-laterite {
+  fill: var(--laterite);
+}
+.s-etape {
+  fill: var(--encre);
+  font: 700 11px var(--titre);
+  letter-spacing: 0.06em;
+}
+.s-code {
+  fill: var(--encre);
+  font: 500 12px var(--mono);
+  font-variant-ligatures: none;
+}
+.s-code-laterite {
+  fill: var(--laterite);
+  font-weight: 800;
+}
+.s-code-fort {
+  font-weight: 800;
+}
+.s-corps {
+  fill: var(--encre);
+  font: 13px var(--texte);
+}
+.s-cadre,
+.s-trait {
+  fill: none;
+  stroke: var(--encre);
+  stroke-width: 1.5;
+}
+.s-cadre-pointille {
+  fill: none;
+  stroke: var(--gris);
+  stroke-dasharray: 4 4;
+}
+.s-bordure {
+  fill: none;
+  stroke: var(--encre);
+  stroke-width: 4;
+}
+.s-fond {
+  fill: var(--filet);
+}
+.s-boite-contenu {
+  fill: var(--papier);
+  stroke: var(--laterite);
+  stroke-width: 2;
+}
+.s-route {
+  stroke: var(--laterite);
+  stroke-width: 6;
+}
+.s-station {
+  fill: var(--papier);
+  stroke: var(--laterite);
+  stroke-width: 4;
 }
 
 /* Exercices */

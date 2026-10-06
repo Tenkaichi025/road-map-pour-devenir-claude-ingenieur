@@ -83,6 +83,49 @@ form.addEventListener("submit", (evenement) =&gt; {
             page telle qu'elle est maintenant, avec tout ce que JavaScript a ajouté. Quand tu cherches un bug
             d'affichage, c'est le DOM qu'il faut regarder.
           </p>
+          <figure class="schema">
+            <svg viewBox="0 0 320 230" role="img" aria-labelledby="schema-14-titre schema-14-desc">
+              <title id="schema-14-titre">Code source figé et DOM vivant</title>
+              <desc id="schema-14-desc">
+                À gauche, le code source affiché par Ctrl+U : un formulaire et une liste ul vide, qui ne changent jamais.
+                À droite, le DOM affiché par l'onglet Éléments : le formulaire, la liste, et trois éléments li ajoutés
+                par JavaScript. Au rechargement, le DOM repart du code source et les tâches disparaissent.
+              </desc>
+              <defs>
+                <marker id="fleche-14" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+                  <path class="s-laterite" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <text class="s-ui" x="0" y="14">Code source</text>
+              <text class="s-note" x="0" y="30">Ctrl + U · le fichier</text>
+              <rect class="s-cadre" x="0.75" y="40" width="140" height="120" />
+              <text class="s-code" x="10" y="66">&lt;form&gt;…&lt;/form&gt;</text>
+              <text class="s-code" x="10" y="92">&lt;ul id="liste"&gt;</text>
+              <text class="s-code" x="10" y="118">&lt;/ul&gt;</text>
+              <text class="s-note" x="70" y="178" text-anchor="middle">ne change jamais</text>
+
+              <line class="s-lien" x1="145" y1="100" x2="160" y2="100" marker-end="url(#fleche-14)" />
+
+              <text class="s-ui" x="170" y="14">DOM</text>
+              <text class="s-note" x="170" y="30">Éléments · la page vivante</text>
+              <rect class="s-cadre" x="166" y="40" width="153" height="120" />
+              <text class="s-code" x="176" y="66">form</text>
+              <text class="s-code" x="176" y="88">ul#liste</text>
+              <path class="s-trait" d="M184 94 V148 M184 108 H194 M184 128 H194 M184 148 H194" />
+              <text class="s-code s-code-laterite" x="198" y="112">li Pain</text>
+              <text class="s-code s-code-laterite" x="198" y="132">li Appeler Awa</text>
+              <text class="s-code s-code-laterite" x="198" y="152">li Facture CIE</text>
+              <text class="s-note s-note-laterite" x="242" y="178" text-anchor="middle">ajoutés par JavaScript</text>
+
+              <g class="s-filet"><line x1="0" y1="192" x2="320" y2="192" /></g>
+              <text class="s-note" x="160" y="208" text-anchor="middle">Recharge la page : le DOM repart du code source,</text>
+              <text class="s-note" x="160" y="222" text-anchor="middle">et les tâches disparaissent.</text>
+            </svg>
+            <figcaption>
+              JavaScript ne modifie jamais le fichier : il modifie le DOM, la copie vivante de la page gardée en mémoire.
+            </figcaption>
+          </figure>
         </section>
 
         <section class="bloc" id="verifier">

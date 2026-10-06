@@ -48,5 +48,7 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 
 ## État actuel & Prochaines étapes
 - Module 1 terminé et validé. Vidéos abandonnées (dossier `video/` supprimé, sections vidéo retirées des leçons).
-- Schéma 1.1 (chronologie du chargement, façon onglet Réseau) fait, en attente de validation du style.
-- Ensuite : schémas 1.2 à 1.5, puis module 2.
+- Schémas du module 1 faits : 1.1 chronologie du chargement, 1.2 champ de formulaire découpé, 1.3 modèle de boîte
+  + grille 375/1280 px, 1.4 code source vs DOM, 1.5 méthode + matrice symptôme → outil. Vérifiés : aucun texte ne
+  déborde, lisibles à 375 px, clair et sombre.
+- Ensuite : module 2 (back-end).

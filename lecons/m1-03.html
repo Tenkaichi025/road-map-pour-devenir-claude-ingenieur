@@ -37,6 +37,44 @@
             d'abord pour le téléphone, puis on ajoute des règles pour les écrans plus larges. Point important : l'IA
             ne voit jamais ta page sur un téléphone. C'est toi qui dois le vérifier.
           </p>
+          <figure class="schema">
+            <svg viewBox="0 0 320 362" role="img" aria-labelledby="schema-13-titre schema-13-desc">
+              <title id="schema-13-titre">Le modèle de boîte et une grille responsive</title>
+              <desc id="schema-13-desc">
+                En haut, une boîte : au centre le contenu, autour le padding (espace intérieur), puis la bordure, puis le
+                margin (espace extérieur). En bas, la même grille de trois cartes : une seule colonne sur un écran de
+                375 pixels, trois colonnes sur un écran de 1280 pixels, grâce à une règle @media.
+              </desc>
+
+              <rect class="s-cadre-pointille" x="1" y="1" width="318" height="150" />
+              <text class="s-note" x="8" y="17">margin : l'espace autour</text>
+              <rect class="s-fond" x="22" y="26" width="276" height="102" />
+              <rect class="s-bordure" x="22" y="26" width="276" height="102" />
+              <text class="s-note s-sans-halo" x="32" y="45">padding : l'espace intérieur</text>
+              <rect class="s-boite-contenu" x="62" y="56" width="196" height="54" />
+              <text class="s-ui-laterite" x="160" y="88" text-anchor="middle">contenu</text>
+              <text class="s-note" x="298" y="145" text-anchor="end">↑ bordure</text>
+
+              <text class="s-note" x="0" y="184">la même grille, deux largeurs d'écran</text>
+              <rect class="s-cadre" x="0.75" y="196" width="64" height="128" />
+              <rect class="s-laterite" x="8" y="204" width="48" height="32" />
+              <rect class="s-laterite" x="8" y="244" width="48" height="32" />
+              <rect class="s-laterite" x="8" y="284" width="48" height="32" />
+              <text class="s-ui" x="0" y="342">375 px</text>
+              <text class="s-note" x="0" y="356">1 colonne</text>
+
+              <rect class="s-cadre" x="90" y="196" width="229" height="96" />
+              <rect class="s-laterite" x="102" y="214" width="62" height="40" />
+              <rect class="s-laterite" x="174" y="214" width="62" height="40" />
+              <rect class="s-laterite" x="246" y="214" width="62" height="40" />
+              <text class="s-ui" x="90" y="312">1280 px <tspan class="s-note">· 3 colonnes</tspan></text>
+              <text class="s-code" x="90" y="336">@media (min-width: 700px)</text>
+            </svg>
+            <figcaption>
+              En haut : chaque élément est une boîte. En bas : la même grille de trois cartes, réorganisée par une règle
+              <code>@media</code> selon la largeur de l'écran.
+            </figcaption>
+          </figure>
         </section>
 
         <section class="bloc" id="exemple">

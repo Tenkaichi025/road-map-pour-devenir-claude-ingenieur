@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Le cycle requête-réponse · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m2-01">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 2.1</p>
+          <h1>Le cycle requête-réponse</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Tout le web fonctionne sur un seul échange, répété des milliards de fois : un <strong>client</strong>
+            envoie une <strong>requête</strong>, un <strong>serveur</strong> renvoie une <strong>réponse</strong>. Le
+            client, c'est ton navigateur, une application mobile, ou un outil en ligne de commande comme
+            <code>curl</code>. Le serveur, c'est un programme qui attend des requêtes et décide quoi répondre.
+          </p>
+          <p>
+            Une requête dit <strong>ce qu'on veut faire</strong> (la méthode : <code>GET</code> pour lire,
+            <code>POST</code> pour créer…) et <strong>sur quoi</strong> (le chemin : <code>/reservations</code>). Une
+            réponse commence toujours par un <strong>code de statut</strong> : un nombre qui résume le résultat. 200,
+            tout va bien. 404, ça n'existe pas. 500, le serveur a planté.
+          </p>
+          <p>
+            Pourquoi c'est essentiel avec l'IA ? Parce que l'IA écrit volontiers un serveur qui répond « 200 » à tout,
+            même quand ça a échoué. Le code de statut est le premier mensonge à vérifier.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Un système de réservation de salles de réunion. Trois salles : Baobab, Fromager et Iroko. On peut voir les
+            salles, et en réserver une pour une date. Deux personnes ne doivent pas réserver la même salle le même
+            jour.
+          </p>
+          <h3>Une requête, une réponse</h3>
+          <p>Voici, mot pour mot, ce qui circule quand Awa réserve la salle Baobab :</p>
+          <pre><code>POST /reservations HTTP/1.1                      ← méthode, chemin
+Host: localhost:3000
+Content-Type: application/json                   ← en-têtes : des infos sur la requête
+
+{ "salle": "Baobab", "date": "2026-11-14", "nom": "Awa" }    ← le corps : les données envoyées</code></pre>
+          <pre><code>HTTP/1.1 201 Created                             ← le code de statut
+Content-Type: application/json; charset=utf-8
+
+{ "id": 1, "salle": "Baobab", "date": "2026-11-14", "nom": "Awa" }</code></pre>
+          <p>
+            Si Kofi envoie ensuite exactement la même demande, le serveur doit répondre autre chose :
+          </p>
+          <pre><code>HTTP/1.1 409 Conflict
+
+{ "erreur": "La salle Baobab est déjà réservée le 2026-11-14." }</code></pre>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 330" role="img" aria-labelledby="schema-21-titre schema-21-desc">
+              <title id="schema-21-titre">Trois échanges entre un client et le serveur de réservation</title>
+              <desc id="schema-21-desc">
+                Le client demande GET /salles, le serveur répond 200 avec la liste des salles. Le client envoie POST
+                /reservations avec la salle, la date et le nom, le serveur répond 201 avec la réservation créée. Le
+                client renvoie la même demande, même salle et même date, le serveur répond 409 : déjà réservée.
+              </desc>
+              <defs>
+                <marker id="fleche-21" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+                <marker id="fleche-21-l" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-laterite" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <text class="s-ui" x="40" y="16" text-anchor="middle">Client</text>
+              <text class="s-note" x="44" y="32" text-anchor="middle">navigateur, curl</text>
+              <text class="s-ui" x="280" y="16" text-anchor="middle">Serveur</text>
+              <text class="s-note" x="280" y="32" text-anchor="middle">serveur.js</text>
+              <line class="s-repere" x1="40" y1="42" x2="40" y2="312" />
+              <line class="s-repere" x1="280" y1="42" x2="280" y2="312" />
+
+              <text class="s-code" x="160" y="66" text-anchor="middle">GET /salles</text>
+              <line class="s-trait" x1="44" y1="74" x2="274" y2="74" marker-end="url(#fleche-21)" />
+              <text class="s-code s-code-fort" x="160" y="98" text-anchor="middle">200 OK</text>
+              <line class="s-trait" x1="276" y1="106" x2="46" y2="106" marker-end="url(#fleche-21)" />
+              <text class="s-note" x="160" y="122" text-anchor="middle">la liste des salles</text>
+
+              <text class="s-code" x="160" y="150" text-anchor="middle">POST /reservations</text>
+              <line class="s-trait" x1="44" y1="158" x2="274" y2="158" marker-end="url(#fleche-21)" />
+              <text class="s-note" x="160" y="174" text-anchor="middle">{ salle, date, nom }</text>
+              <text class="s-code s-code-fort" x="160" y="198" text-anchor="middle">201 Created</text>
+              <line class="s-trait" x1="276" y1="206" x2="46" y2="206" marker-end="url(#fleche-21)" />
+              <text class="s-note" x="160" y="222" text-anchor="middle">la réservation créée</text>
+
+              <text class="s-code" x="160" y="246" text-anchor="middle">POST /reservations</text>
+              <line class="s-trait" x1="44" y1="254" x2="274" y2="254" marker-end="url(#fleche-21)" />
+              <text class="s-note" x="160" y="270" text-anchor="middle">même salle, même date</text>
+              <text class="s-code s-code-laterite" x="160" y="294" text-anchor="middle">409 Conflict</text>
+              <line class="s-lien" x1="276" y1="302" x2="46" y2="302" marker-end="url(#fleche-21-l)" />
+              <text class="s-note s-note-laterite" x="160" y="320" text-anchor="middle">« déjà réservée »</text>
+            </svg>
+            <figcaption>
+              Chaque flèche vers la droite est une requête, chaque flèche vers la gauche une réponse. La même requête
+              peut recevoir une réponse différente : tout dépend de ce que le serveur sait déjà.
+            </figcaption>
+          </figure>
+
+          <h3>Le code du serveur</h3>
+          <p>
+            Voici le cœur du serveur Node.js, écrit avec le module <code>http</code> fourni avec Node (aucune
+            installation). Tu n'as pas à savoir l'écrire. Tu dois savoir le <strong>lire</strong> : quelle requête
+            arrive, quelles vérifications sont faites, et quel code est renvoyé dans chaque cas.
+          </p>
+          <pre><code>if (req.method === "POST" &amp;&amp; url.pathname === "/reservations") {
+  let demande;
+  try {
+    demande = await lireCorps(req);              // le corps envoyé par le client
+  } catch {
+    return repondre(res, 400, { erreur: "Le corps n'est pas du JSON valide." });
+  }
+
+  const { salle, date, nom } = demande || {};
+  if (!salle || !date || !nom) {
+    return repondre(res, 400, { erreur: "Il faut une salle, une date et un nom." });
+  }
+  if (!salles.includes(salle)) {
+    return repondre(res, 404, { erreur: `La salle ${salle} n'existe pas.` });
+  }
+  if (reservations.some((r) =&gt; r.salle === salle &amp;&amp; r.date === date)) {
+    return repondre(res, 409, { erreur: `La salle ${salle} est déjà réservée le ${date}.` });
+  }
+
+  const reservation = { id: reservations.length + 1, salle, date, nom };
+  reservations.push(reservation);
+  return repondre(res, 201, reservation);       // tout est bon : créé
+}</code></pre>
+          <p>
+            Remarque la forme : <strong>chaque vérification qui échoue s'arrête tout de suite</strong> avec un
+            <code>return</code> et un code d'erreur précis. On n'arrive à la création qu'après avoir tout vérifié.
+          </p>
+
+          <h3>Les codes que tu verras le plus</h3>
+          <ul>
+            <li><code>200 OK</code> : la demande a réussi (lecture, modification).</li>
+            <li><code>201 Created</code> : quelque chose a été créé.</li>
+            <li><code>400 Bad Request</code> : la demande est mal formée ou incomplète. C'est la faute du client.</li>
+            <li><code>401</code> / <code>403</code> : pas connecté / pas le droit (leçon 2.4 et module 3).</li>
+            <li><code>404 Not Found</code> : ce qui est demandé n'existe pas.</li>
+            <li><code>409 Conflict</code> : la demande entre en conflit avec l'état actuel (déjà réservé).</li>
+            <li><code>500 Internal Server Error</code> : le serveur a planté. C'est la faute du serveur.</li>
+          </ul>
+          <p>Retiens la règle : <strong>4xx</strong>, c'est le client qui s'est trompé. <strong>5xx</strong>, c'est le serveur.</p>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Quand l'IA écrit ou modifie du code serveur :</p>
+          <ul class="liste-verif">
+            <li>
+              Chaque cas renvoie <strong>le bon code</strong> : 201 pour une création, 400 pour une demande invalide,
+              404 pour ce qui n'existe pas, 409 pour un conflit. Pas 200 partout.
+            </li>
+            <li>Teste avec <code>curl -si</code> et regarde la <strong>première ligne</strong> (le code), pas seulement le contenu.</li>
+            <li>Le serveur vérifie tout ce qui arrive : champs présents, valeurs autorisées. Il ne fait jamais confiance au client.</li>
+            <li>Un JSON mal formé donne une réponse 400, <strong>pas un plantage</strong>. Test : envoie un fichier cassé, puis vérifie que le serveur répond encore.</li>
+            <li>Après chaque réponse d'erreur dans une condition, il y a un <code>return</code>. Sinon le code continue et fait quand même l'action.</li>
+            <li>Les messages d'erreur sont clairs pour l'utilisateur, sans détails internes (chemins de fichiers, traces d'erreur).</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Le client envoie une requête : une méthode, un chemin, des en-têtes, parfois un corps.</li>
+            <li>Le serveur renvoie une réponse qui commence toujours par un code de statut.</li>
+            <li>GET pour lire, POST pour créer. 4xx : erreur du client. 5xx : erreur du serveur.</li>
+            <li>Un bon serveur vérifie tout, et s'arrête au premier problème avec le code qui le décrit.</li>
+            <li>Teste avec <code>curl -si</code> : le code de statut ne ment pas, le texte peut mentir.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans <code>exercices/m2-01/</code>. Il te faut Node.js (version 18 ou plus) et un
+            terminal. Sous Windows, dans PowerShell, tape toujours <code>curl.exe</code> et pas <code>curl</code> :
+            dans PowerShell, <code>curl</code> désigne une autre commande qui n'accepte pas les mêmes options.
+          </p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Parler au serveur de réservation</h3>
+            <ol>
+              <li>
+                Ouvre un terminal dans <code>exercices/m2-01/serveur-salles</code> et lance :
+                <pre><code>node serveur.js</code></pre>
+                Le message <code>Serveur prêt : http://localhost:3000/salles</code> s'affiche. Laisse ce terminal
+                ouvert : le serveur tourne tant qu'il est ouvert.
+              </li>
+              <li>
+                Dans ton navigateur, ouvre <code>http://localhost:3000/salles</code>. Puis <kbd>F12</kbd>, onglet
+                Réseau, recharge, et clique sur la ligne <code>salles</code> : tu vois la méthode, le code de statut et
+                les en-têtes.
+              </li>
+              <li>Ouvre un <strong>deuxième</strong> terminal dans <code>exercices/m2-01/requetes</code>. Lis la liste des salles :</li>
+            </ol>
+            <pre><code>curl.exe -si http://localhost:3000/salles</code></pre>
+            <ol start="4">
+              <li>Réserve la salle Baobab pour Awa (le corps est lu dans le fichier <code>reservation-awa.json</code>) :</li>
+            </ol>
+            <pre><code>curl.exe -si -X POST http://localhost:3000/reservations -H "Content-Type: application/json" --data "@reservation-awa.json"</code></pre>
+            <ol start="5">
+              <li>Envoie maintenant la demande de Kofi : <code>--data "@reservation-kofi.json"</code>. Puis une demande incomplète : <code>--data "@reservation-incomplete.json"</code>.</li>
+              <li>Demande une adresse qui n'existe pas : <code>curl.exe -si http://localhost:3000/salles/zzz</code>.</li>
+              <li>Regarde le premier terminal : chaque requête reçue par le serveur y est écrite.</li>
+              <li>Arrête le serveur avec <kbd>Ctrl</kbd> + <kbd>C</kbd>, relance-le, et redemande <code>/reservations</code>.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> tu obtiens dans l'ordre 200, 201, 409, 400 et 404, et tu sais
+              expliquer chaque code. Après le redémarrage, la liste des réservations est vide.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>
+                <code>Échec de la connexion</code> ou <code>Connection refused</code> ? Le serveur ne tourne pas :
+                regarde le premier terminal. <code>Couldn't read data from file</code> ? Ton deuxième terminal n'est pas
+                dans le dossier <code>requetes</code>.
+              </p>
+              <p>L'option <code>-i</code> affiche les en-têtes de la réponse, dont la première ligne avec le code. <code>-s</code> cache la barre de progression.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li><code>200 OK</code> : lecture réussie, la liste des 3 salles.</li>
+                <li><code>201 Created</code> : la réservation d'Awa est créée, avec l'<code>id</code> 1.</li>
+                <li><code>409 Conflict</code> : Kofi demande la même salle à la même date.</li>
+                <li><code>400 Bad Request</code> : il manque la date et le nom.</li>
+                <li><code>404 Not Found</code> : aucune route ne correspond à <code>/salles/zzz</code>.</li>
+              </ol>
+              <p>
+                Après le redémarrage, tout a disparu : les réservations sont gardées en mémoire, dans une simple liste
+                JavaScript. Pour les garder, il faut une base de données : c'est la leçon 2.3.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire écrire un serveur par Claude, puis vérifier ses codes</h3>
+            <ol>
+              <li>Dans un dossier de travail vide, demande à Claude :</li>
+            </ol>
+            <pre><code>Écris un serveur Node.js dans serveur.js, avec le module node:http
+uniquement (pas d'Express), sur le port 3001. Il gère une liste de
+livres en mémoire, chaque livre a un id, un titre et un auteur.
+Routes : GET /livres, GET /livres/:id, POST /livres.
+Réponses en JSON.</code></pre>
+            <ol start="2">
+              <li>
+                Lance-le, puis teste-le depuis <code>exercices/m2-01/requetes</code> avec les fichiers
+                <code>livre.json</code>, <code>livre-sans-titre.json</code> et <code>json-casse.json</code>. Teste
+                aussi <code>GET /livres/999</code>.
+              </li>
+              <li>Pour chaque requête, note le code obtenu et le code attendu. Pour chaque écart, demande une correction précise.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> création → 201, livre sans titre → 400, JSON cassé → 400
+              <strong>et le serveur tourne toujours</strong>, livre inconnu → 404.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Après le test du JSON cassé, regarde le terminal du serveur : s'il affiche une erreur <code>SyntaxError</code> et te rend la main, le serveur a planté.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Les écarts que l'IA produit le plus souvent :</p>
+              <ul>
+                <li><strong>Le JSON cassé fait planter le serveur</strong> : <code>JSON.parse</code> est appelé sans <code>try/catch</code>. Un seul visiteur mal intentionné peut arrêter le service.</li>
+                <li><strong>La création renvoie 200</strong> au lieu de 201.</li>
+                <li><strong>Un livre inconnu renvoie 200 avec <code>null</code></strong>, ou un corps vide, au lieu de 404.</li>
+                <li><strong>Le titre manquant est accepté</strong> : aucune vérification des champs.</li>
+              </ul>
+              <p>Exemple de demande de correction :</p>
+              <pre><code>Corrige uniquement ces points :
+1. Un corps JSON invalide doit renvoyer 400, sans arrêter le serveur.
+2. POST /livres doit renvoyer 201, et 400 si le titre ou l'auteur manque.
+3. GET /livres/:id doit renvoyer 404 si le livre n'existe pas.
+Montre-moi les lignes modifiées.</code></pre>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>La double réservation</h3>
+            <p>
+              Le serveur <code>exercices/m2-01/serveur-double/</code> a été « amélioré » par une IA. Depuis, Awa et
+              Kofi peuvent réserver la même salle le même jour : les deux reçoivent un 201. Reproduis le problème avec
+              <code>curl.exe</code>, trouve la cause, corrige-la, puis <strong>prouve</strong> que c'est réparé.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> Awa reçoit 201, Kofi reçoit 409, et <code>GET /reservations</code>
+              ne contient qu'une seule réservation.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Commence par reproduire : deux requêtes, deux codes, puis la liste des réservations.</li>
+                <li>Le serveur a bien une vérification de conflit. Pourquoi ne trouve-t-elle jamais rien ? Ajoute un <code>console.log</code> juste avant, pour voir ce que contient la liste.</li>
+                <li>Compare, lettre par lettre, les noms des champs d'une réservation enregistrée avec ceux utilisés dans la vérification.</li>
+              </ul>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>
+                Ligne 58, la vérification compare <code>r.jour === date</code>. Mais les réservations sont enregistrées
+                avec un champ <code>date</code>, pas <code>jour</code>. <code>r.jour</code> vaut toujours
+                <code>undefined</code>, donc le conflit n'est jamais détecté. Correction :
+              </p>
+              <pre><code>if (reservations.some((r) =&gt; r.salle === salle &amp;&amp; r.date === date)) {</code></pre>
+              <p>
+                C'est le même genre de bug qu'en 1.5 (<code>temperature</code> au lieu de <code>temp</code>). Ici, il n'y
+                a <strong>aucune erreur</strong> nulle part : seul un test qui envoie deux fois la même demande et
+                <strong>attend un 409</strong> le révèle. Garde ce réflexe : pour chaque règle métier (« pas deux
+                réservations en même temps »), il faut un test qui essaie de la violer.
+              </p>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Tu envoies une réservation sans date. Quel code le serveur doit-il renvoyer ?</legend>
+            <label><input type="radio" name="q1" /> 200, avec un message d'erreur dans le corps.</label>
+            <label><input type="radio" name="q1" /> 400, parce que la demande est incomplète.</label>
+            <label><input type="radio" name="q1" /> 500, parce que quelque chose s'est mal passé.</label>
+            <p class="explication" hidden>
+              La demande est incomplète : c'est une erreur du client, donc un code 4xx, ici 400. 500 voudrait dire que
+              le serveur lui-même a planté. Et 200 avec une erreur dans le corps trompe tous les outils qui se fient au
+              code.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. Quelle est la différence entre <code>GET</code> et <code>POST</code> ?</legend>
+            <label><input type="radio" name="q2" /> <code>GET</code> est plus rapide, <code>POST</code> plus fiable.</label>
+            <label><input type="radio" name="q2" /> <code>POST</code> est sécurisé, <code>GET</code> ne l'est pas.</label>
+            <label><input type="radio" name="q2" /> <code>GET</code> demande à lire, <code>POST</code> envoie des données pour créer quelque chose.</label>
+            <p class="explication" hidden>
+              La méthode dit l'intention. <code>POST</code> n'est pas plus sûr : sans HTTPS, son corps circule en clair
+              exactement comme une adresse <code>GET</code> (module 3).
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. Le serveur généré par l'IA plante quand on lui envoie un JSON mal formé. Que dois-tu exiger ?</legend>
+            <label><input type="radio" name="q3" /> Qu'il réponde 400 avec un message clair, et continue de tourner.</label>
+            <label><input type="radio" name="q3" /> Que l'application cliente n'envoie jamais de JSON mal formé.</label>
+            <label><input type="radio" name="q3" /> Qu'il redémarre automatiquement après chaque plantage.</label>
+            <p class="explication" hidden>
+              Le serveur ne contrôle pas ce que les clients envoient : n'importe qui peut lui écrire avec
+              <code>curl</code>. Il doit donc se défendre lui-même. Un redémarrage automatique cache le problème, et un
+              attaquant pourrait le faire planter en boucle.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

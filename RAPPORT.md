@@ -35,6 +35,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - GitHub Pages (Jekyll) ignore les fichiers en `_` → ajout de `.nojekyll`.
 - Ligatures JetBrains Mono (`</` fusionné) déroutantes pour un débutant → `font-variant-ligatures: none`.
 - Vidéos (Remotion + voix ElevenLabs puis edge-tts) testées puis abandonnées : trop lourdes à gérer. Le site se suffit.
+- PowerShell : `curl` est un alias d'Invoke-WebRequest et les guillemets JSON sautent → toujours `curl.exe`, corps
+  JSON lu depuis un fichier (`--data "@fichier.json"`).
 - Chrome headless ne descend pas sous 500 px de large → tests mobiles via une iframe de 375 px.
 - Exercice « page qui déborde » : une longue URL ne débordait pas (Chrome coupe après les « / ») → cause
   remplacée par `white-space: nowrap` sur le titre. Leçon : toujours vérifier qu'un bug « pédagogique » se produit vraiment.
@@ -51,4 +53,7 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - Schémas du module 1 faits : 1.1 chronologie du chargement, 1.2 champ de formulaire découpé, 1.3 modèle de boîte
   + grille 375/1280 px, 1.4 code source vs DOM, 1.5 méthode + matrice symptôme → outil. Vérifiés : aucun texte ne
   déborde, lisibles à 375 px, clair et sombre.
-- Ensuite : module 2 (back-end).
+- Module 2 en cours : leçon 2.1 (cycle requête-réponse) rédigée. Exemple : réservation de salles en Node.js
+  (`node:http`, sans dépendance). Exercices : `exercices/m2-01/` (serveur correct, serveur avec bug de double
+  réservation ligne 58, fichiers JSON pour `curl.exe --data "@fichier"`). Codes vérifiés avec curl, y compris depuis PowerShell.
+- Ensuite : leçon 2.2 (API et JSON).

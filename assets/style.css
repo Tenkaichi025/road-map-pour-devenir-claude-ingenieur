@@ -609,6 +609,33 @@ progress::-moz-progress-bar {
   stroke-width: 4;
 }
 
+/* Tableaux */
+.tableau {
+  overflow-x: auto;
+  margin: 1rem 0 1.5rem;
+}
+.tableau table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95rem;
+}
+.tableau th,
+.tableau td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 1px solid var(--filet);
+}
+.tableau th {
+  font: 700 0.75rem var(--titre);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gris);
+}
+.tableau td:first-child {
+  white-space: nowrap;
+}
+
 /* Exercices */
 .exercice + .exercice {
   margin-top: 2.5rem;

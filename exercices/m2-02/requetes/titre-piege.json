@@ -1,0 +1,7 @@
+{
+  "titre": "<img src=x onerror=\"alert('Ce titre exécute du code !')\">",
+  "date": "2026-12-20",
+  "lieu": "Yopougon",
+  "places": 100,
+  "gratuit": true
+}

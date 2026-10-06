@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Une API REST et le JSON · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m2-02">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 2.2</p>
+          <h1>Une API REST et le JSON</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Une <strong>API</strong>, c'est la liste des requêtes qu'un serveur accepte, avec ce qu'il répond à chacune.
+            C'est un menu : la page web, une application mobile ou un autre serveur commandent dedans. Les données
+            voyagent presque toujours en <strong>JSON</strong>, un format texte simple que tous les langages savent
+            lire.
+          </p>
+          <p>
+            <strong>REST</strong> est une façon d'organiser ce menu. L'adresse désigne <strong>une chose</strong>
+            (<code>/api/evenements</code>, ou <code>/api/evenements/12</code> pour l'événement n°12). La méthode dit
+            <strong>l'action</strong> : <code>GET</code> pour lire, <code>POST</code> pour créer, <code>PUT</code>
+            pour modifier, <code>DELETE</code> pour supprimer.
+          </p>
+          <p>
+            Et de l'autre côté, la page qui appelle l'API doit prévoir que les données mettent du temps à arriver,
+            qu'elles n'arrivent pas, ou qu'il n'y en a aucune. Un écran qui charge des données a donc toujours
+            <strong>quatre états</strong> : chargement, erreur, vide, liste. L'IA n'en code souvent qu'un seul :
+            celui où tout va bien.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            L'agenda des événements d'Abidjan : une API qui gère des concerts, des marchés, des ateliers, et une page
+            qui les affiche. Voici un événement, en JSON :
+          </p>
+          <pre><code>{
+  "id": 1,
+  "titre": "Nuit du coupé-décalé",
+  "date": "2026-11-21",
+  "lieu": "Palais de la Culture, Treichville",
+  "places": 1200,
+  "gratuit": false
+}</code></pre>
+          <h3>Les règles du JSON</h3>
+          <ul>
+            <li>Les noms des champs sont toujours entre <strong>guillemets doubles</strong> : <code>"titre"</code>, jamais <code>titre</code> ni <code>'titre'</code>.</li>
+            <li>Valeurs possibles : du texte entre guillemets, un nombre (<code>1200</code>, sans guillemets), <code>true</code>, <code>false</code>, <code>null</code>, une liste <code>[ ]</code> ou un objet <code>{ }</code>.</li>
+            <li><strong>Pas de virgule</strong> après le dernier élément, et <strong>pas de commentaires</strong>.</li>
+            <li>Il n'y a pas de type « date » : on l'écrit en texte, au format <code>AAAA-MM-JJ</code>.</li>
+          </ul>
+
+          <h3>Les routes de l'API</h3>
+          <div class="tableau">
+            <table>
+              <thead>
+                <tr><th>Requête</th><th>Rôle</th><th>Réponse si tout va bien</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>GET /api/evenements</code></td><td>Lire tous les événements</td><td><code>200</code> + la liste</td></tr>
+                <tr><td><code>GET /api/evenements/1</code></td><td>Lire l'événement n°1</td><td><code>200</code> + l'événement</td></tr>
+                <tr><td><code>POST /api/evenements</code></td><td>Créer un événement</td><td><code>201</code> + l'événement créé</td></tr>
+                <tr><td><code>PUT /api/evenements/1</code></td><td>Remplacer l'événement n°1</td><td><code>200</code> + l'événement modifié</td></tr>
+                <tr><td><code>DELETE /api/evenements/1</code></td><td>Supprimer l'événement n°1</td><td><code>204</code>, sans contenu</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            Et si l'événement demandé n'existe pas : <code>404</code>, pour <code>GET</code>, <code>PUT</code>
+            <strong>et</strong> <code>DELETE</code>. Si les données envoyées sont invalides : <code>400</code>.
+          </p>
+
+          <h3>Côté serveur : choisir ce qu'on garde</h3>
+          <p>
+            Quand un événement arrive, le serveur le vérifie champ par champ, puis il <strong>recopie uniquement les
+            champs qu'il connaît</strong>. Jamais le corps reçu tel quel :
+          </p>
+          <pre><code>async function lireEvenement(req) {
+  let demande;
+  try {
+    demande = await lireCorps(req);
+  } catch {
+    return { erreur: "Le corps de la requête n'est pas du JSON valide." };
+  }
+  const probleme = verifier(demande);          // titre ? date au bon format ? places entier positif ?
+  if (probleme) return { erreur: probleme };
+  const { titre, date, lieu, places, gratuit } = demande;   // on ne garde que les champs connus
+  return { evenement: { titre, date, lieu, places, gratuit } };
+}</code></pre>
+          <p>
+            Pourquoi ? Si le serveur recopiait le corps entier, un client pourrait envoyer <code>"id": 1</code> pour
+            écraser un autre événement, ou <code>"admin": true</code> pour se donner des droits. C'est le serveur qui
+            décide, pas le client.
+          </p>
+
+          <h3>Côté page : les quatre états</h3>
+          <pre><code>async function charger() {
+  afficher("chargement");                      // 1. on prévient : ça arrive
+  try {
+    const reponse = await fetch("/api/evenements");
+    if (!reponse.ok) throw new Error("Erreur " + reponse.status);   // 2. voir ci-dessous
+    const evenements = await reponse.json();
+    if (evenements.length === 0) return afficher("vide");           // 3. rien à montrer : on le dit
+    afficher("liste", evenements);
+  } catch {
+    afficher("erreur");                        // 4. réseau coupé, serveur arrêté, réponse en erreur
+  }
+}</code></pre>
+          <p>
+            Le piège de la ligne 2 : <code>fetch</code> ne considère comme une erreur que l'échec du réseau. Un
+            <code>404</code> ou un <code>500</code> est pour lui une réponse normale. Sans la vérification de
+            <code>reponse.ok</code>, la page essaie d'afficher un message d'erreur du serveur comme si c'était une liste
+            d'événements.
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 250" role="img" aria-labelledby="schema-22-titre schema-22-desc">
+              <title id="schema-22-titre">Les quatre états d'un écran qui charge des données</title>
+              <desc id="schema-22-desc">
+                L'écran commence dans l'état chargement. Ensuite, trois issues possibles : erreur, si le réseau est
+                coupé ou si la réponse n'est pas ok, avec un bouton Réessayer ; vide, si la réponse est ok mais la
+                liste est vide ; liste, si la réponse contient au moins un élément.
+              </desc>
+              <defs>
+                <marker id="fleche-22" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+                <marker id="fleche-22-l" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-laterite" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <rect class="s-cadre" x="100" y="1" width="120" height="50" />
+              <text class="s-ui" x="160" y="23" text-anchor="middle">Chargement</text>
+              <text class="s-note" x="160" y="40" text-anchor="middle">« Chargement… »</text>
+
+              <line class="s-lien" x1="140" y1="52" x2="56" y2="106" marker-end="url(#fleche-22-l)" />
+              <line class="s-trait" x1="160" y1="52" x2="160" y2="106" marker-end="url(#fleche-22)" />
+              <line class="s-trait" x1="180" y1="52" x2="264" y2="106" marker-end="url(#fleche-22)" />
+
+              <rect class="s-boite-contenu" x="1" y="110" width="96" height="62" />
+              <text class="s-ui-laterite" x="49" y="134" text-anchor="middle">Erreur</text>
+              <text class="s-note" x="49" y="154" text-anchor="middle">bouton Réessayer</text>
+
+              <rect class="s-cadre" x="112" y="110" width="96" height="62" />
+              <text class="s-ui" x="160" y="134" text-anchor="middle">Vide</text>
+              <text class="s-note" x="160" y="154" text-anchor="middle">« Rien de prévu »</text>
+
+              <rect class="s-cadre" x="223" y="110" width="96" height="62" />
+              <text class="s-ui" x="271" y="134" text-anchor="middle">Liste</text>
+              <rect class="s-barre" x="239" y="146" width="64" height="5" />
+              <rect class="s-barre" x="239" y="157" width="48" height="5" />
+
+              <text class="s-note" x="49" y="192" text-anchor="middle">réseau coupé, ou</text>
+              <text class="s-note" x="49" y="206" text-anchor="middle">réponse pas ok</text>
+              <text class="s-note" x="160" y="192" text-anchor="middle">réponse ok,</text>
+              <text class="s-note" x="160" y="206" text-anchor="middle">liste vide []</text>
+              <text class="s-note" x="271" y="192" text-anchor="middle">réponse ok,</text>
+              <text class="s-note" x="271" y="206" text-anchor="middle">des éléments</text>
+
+              <g class="s-filet"><line x1="0" y1="222" x2="320" y2="222" /></g>
+              <text class="s-note" x="160" y="242" text-anchor="middle">Jamais d'écran blanc : chaque cas a son affichage.</text>
+            </svg>
+            <figcaption>
+              L'état « erreur » est en latérite : c'est celui que l'IA oublie le plus souvent, et celui que tes
+              visiteurs sur une connexion mobile instable verront le plus.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Les erreurs classiques d'une API générée par IA, et comment les débusquer :</p>
+          <ul class="liste-verif">
+            <li>
+              Les adresses désignent des choses et les méthodes disent l'action : <code>DELETE /api/evenements/12</code>,
+              pas <code>GET /supprimerEvenement?id=12</code>.
+            </li>
+            <li>Création → <code>201</code>, suppression → <code>204</code>. Et un id inconnu donne <code>404</code> pour <code>GET</code>, <code>PUT</code> <strong>et</strong> <code>DELETE</code> : teste les trois.</li>
+            <li>Un corps vide <code>{}</code> ou un champ du mauvais type (<code>"places": "beaucoup"</code>) est refusé avec <code>400</code>.</li>
+            <li>Le serveur ne recopie jamais le corps tel quel. Test : envoie un <code>"id"</code> ou un <code>"admin": true</code>, et vérifie qu'ils sont ignorés.</li>
+            <li><code>PUT</code> garde l'<code>id</code> de l'événement, et ne laisse pas un objet à moitié vide.</li>
+            <li>Les fonctions de vérification sont vraiment <strong>appelées</strong>. L'IA écrit parfois une belle fonction <code>verifier()</code>… que rien n'utilise. Cherche où elle est appelée.</li>
+            <li>Côté page : <code>reponse.ok</code> est vérifié, les quatre états existent, et les textes reçus sont affichés avec <code>textContent</code>.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Une API, c'est la liste des requêtes qu'un serveur accepte. Le JSON est le format des données échangées.</li>
+            <li>REST : l'adresse désigne la chose, la méthode dit l'action (<code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>DELETE</code>).</li>
+            <li>Le serveur vérifie chaque champ et ne garde que ceux qu'il connaît. C'est lui qui décide, pas le client.</li>
+            <li><code>fetch</code> ne lève pas d'erreur sur un 404 ou un 500 : vérifie toujours <code>reponse.ok</code>.</li>
+            <li>Un écran qui charge des données a quatre états : chargement, erreur, vide, liste.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans <code>exercices/m2-02/</code>. Comme en 2.1, tape les commandes <code>curl.exe</code>
+            depuis le dossier <code>exercices/m2-02/requetes</code>, qui contient les fichiers JSON à envoyer.
+          </p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Faire le tour de l'API, puis provoquer les quatre états</h3>
+            <ol>
+              <li>
+                Dans <code>exercices/m2-02/api-evenements</code>, lance <code>node serveur.js</code>. Ouvre
+                <code>http://localhost:3002</code> : la page affiche 3 événements. Ouvre aussi
+                <code>http://localhost:3002/api/evenements</code> : c'est le JSON brut que la page reçoit.
+              </li>
+              <li>Dans un deuxième terminal, depuis <code>requetes</code>, crée un événement, puis recharge la page :</li>
+            </ol>
+            <pre><code>curl.exe -si -X POST http://localhost:3002/api/evenements -H "Content-Type: application/json" --data "@nouvel-evenement.json"</code></pre>
+            <ol start="3">
+              <li>Modifie l'événement n°1 : même commande avec <code>-X PUT</code>, l'adresse <code>/api/evenements/1</code> et <code>--data "@modif-evenement.json"</code>. Recharge la page.</li>
+              <li>Supprime l'événement n°2 : <code>curl.exe -si -X DELETE http://localhost:3002/api/evenements/2</code>. Puis redemande-le avec <code>GET</code>.</li>
+              <li>
+                <strong>État « chargement »</strong> : <kbd>F12</kbd>, onglet Réseau, menu de limitation
+                (« Aucune limitation ») → choisis une connexion lente (3G), puis recharge. Remets « Aucune limitation »
+                ensuite.
+              </li>
+              <li><strong>État « vide »</strong> : supprime tous les événements restants avec <code>DELETE</code>, puis recharge la page.</li>
+              <li>
+                <strong>État « erreur »</strong> : arrête le serveur (<kbd>Ctrl</kbd> + <kbd>C</kbd>). Dans la page
+                encore ouverte, tape <code>charger()</code> dans la Console. Puis relance le serveur et clique sur
+                « Réessayer ».
+              </li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> création → 201, modification → 200, suppression → 204, puis 404 sur
+              l'événement supprimé. Tu as vu les quatre états de la page, et tu sais ce qui déclenche chacun.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Regarde les en-têtes de la réponse du <code>POST</code> : la ligne <code>Location</code> donne l'adresse du nouvel événement.</p>
+              <p>Après le redémarrage du serveur, la liste revient à ses 3 événements de départ : tout est en mémoire.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li><code>POST</code> → <code>201 Created</code>, avec l'id 4 et <code>Location: /api/evenements/4</code>.</li>
+                <li><code>PUT /api/evenements/1</code> → <code>200 OK</code> : la date passe au 22 novembre et les places à 1500.</li>
+                <li><code>DELETE /api/evenements/2</code> → <code>204 No Content</code>, sans corps. Le <code>GET</code> qui suit → <code>404</code>.</li>
+                <li>Connexion lente : « Chargement des événements… » reste visible un moment.</li>
+                <li>Plus d'événements : « Aucun événement prévu pour le moment. »</li>
+                <li>Serveur arrêté : « Impossible de charger les événements. » et le bouton « Réessayer », qui fonctionne dès que le serveur est relancé.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire réécrire la page par Claude, puis tester ce qu'il a oublié</h3>
+            <ol>
+              <li>Copie le dossier <code>api-evenements</code> dans un dossier de travail. Ouvre Claude Code dans la copie et demande :</li>
+            </ol>
+            <pre><code>Réécris public/app.js : la page doit afficher les événements
+renvoyés par GET /api/evenements, triés par date, avec la date
+écrite en français. Pas de bibliothèque.</code></pre>
+            <ol start="2">
+              <li>Remarque : la demande ne parle ni de chargement, ni d'erreur, ni de liste vide. C'est volontaire.</li>
+              <li>Provoque les quatre états comme dans l'exercice 1. Lesquels sont gérés ?</li>
+              <li>
+                Ajoute l'événement piégé, puis recharge la page :
+                <code>--data "@titre-piege.json"</code>. Son titre contient du HTML. Est-ce qu'une fenêtre d'alerte
+                s'ouvre ?
+              </li>
+              <li>Pour chaque manque, écris une demande de correction précise, et reteste.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> les quatre états fonctionnent, et le titre piégé s'affiche comme du
+              texte, sans alerte.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Pour l'état « erreur », regarde aussi la Console : une erreur rouge non gérée veut dire que la page n'a rien prévu.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Les oublis habituels, quand on ne les demande pas :</p>
+              <ul>
+                <li>Pas d'état « chargement » : l'écran reste blanc pendant l'attente.</li>
+                <li>Pas d'état « erreur » : serveur arrêté = écran blanc et erreur rouge dans la Console.</li>
+                <li>Pas d'état « vide » : une liste vide donne une page vide, sans explication.</li>
+                <li><code>reponse.ok</code> non vérifié.</li>
+                <li>
+                  Les cartes construites avec <code>innerHTML</code> et <code>${evenement.titre}</code> : le titre piégé
+                  ouvre une alerte. C'est la faille XSS (leçon 3.2).
+                </li>
+              </ul>
+              <p>Exemple de demande de correction :</p>
+              <pre><code>Complète public/app.js :
+1. Affiche « Chargement… » pendant la requête.
+2. Si fetch échoue ou si reponse.ok est faux, affiche un message
+   d'erreur et un bouton Réessayer.
+3. Si la liste est vide, affiche « Aucun événement prévu ».
+4. N'utilise jamais innerHTML avec des données de l'API : utilise
+   textContent.</code></pre>
+              <p>
+                La leçon : tes prompts doivent nommer les cas difficiles. L'IA code très bien le cas où tout va
+                bien, et oublie volontiers le reste.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Auditer une API générée par IA</h3>
+            <p>
+              <code>exercices/m2-02/api-bugguee/</code> contient la même API, « améliorée » par une IA. Elle se lance
+              avec <code>node serveur.js</code>, sur le port <strong>3003</strong>. À première vue, tout marche. Elle
+              contient pourtant <strong>au moins 5 problèmes</strong>.
+            </p>
+            <p>
+              Trouve-les avec <code>curl.exe</code> et les fichiers du dossier <code>requetes</code>. Pour chacun,
+              écris un mini-rapport : la requête, la réponse attendue, la réponse obtenue. Ensuite, fais corriger l'API
+              par Claude en lui donnant tes rapports, puis relance <strong>tous</strong> tes tests.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> une liste d'au moins 5 problèmes, chacun prouvé par une requête, puis
+              une API corrigée qui passe tous tes tests.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Reprends la liste « Vérifier le travail de l'IA » et transforme chaque ligne en une requête de test.</li>
+                <li>Après chaque requête qui modifie quelque chose, relis toute la liste avec <code>GET /api/evenements</code>.</li>
+                <li>Essaie un id qui n'existe pas avec chaque méthode. Regarde bien ce qui reste dans la liste après un <code>DELETE</code>.</li>
+                <li>Lis le fichier : la fonction <code>verifier</code> existe. Où est-elle appelée ?</li>
+              </ul>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li><code>POST</code> répond <code>200</code> au lieu de <code>201</code>.</li>
+                <li><code>POST</code> avec <code>evenement-vide.json</code> crée un événement qui n'a qu'un id : <strong>aucune vérification</strong>. La fonction <code>verifier</code> existe, mais n'est plus jamais appelée.</li>
+                <li><code>POST</code> avec <code>evenement-piege.json</code> crée un <strong>deuxième événement n°1</strong>, avec <code>"admin": true</code> : le corps est recopié tel quel.</li>
+                <li><code>PUT</code> avec <code>modif-partielle.json</code> remplace l'événement par <code>{ "lieu": … }</code> : il perd son id, son titre, sa date.</li>
+                <li><code>GET /api/evenements/99</code> répond <code>200</code> avec un corps vide, au lieu de <code>404</code>.</li>
+                <li>
+                  <code>DELETE /api/evenements/99</code> répond <code>204</code>… et <strong>supprime le dernier
+                  événement de la liste</strong>. La vérification « introuvable → 404 » a disparu. L'index vaut alors
+                  <code>-1</code>, et <code>splice(-1, 1)</code> retire le dernier élément.
+                </li>
+                <li>Bonus : <code>json-casse.json</code> fait <strong>planter le serveur</strong> (leçon 2.1).</li>
+              </ol>
+              <p>
+                Le problème 6 est le plus grave : une simple faute de frappe dans un id efface les données de quelqu'un
+                d'autre, sans aucune erreur. Seul un test qui supprime un id inexistant <strong>puis relit la
+                liste</strong> le révèle.
+              </p>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="3">
+            <legend>1. Le serveur répond <code>404</code>, mais le <code>catch</code> de ta fonction n'est jamais exécuté. Pourquoi ?</legend>
+            <label><input type="radio" name="q1" /> Le serveur a mal formé sa réponse.</label>
+            <label><input type="radio" name="q1" /> Il faut ajouter <code>await</code> devant <code>catch</code>.</label>
+            <label><input type="radio" name="q1" /> <code>fetch</code> ne considère comme une erreur que l'échec du réseau : il faut vérifier <code>reponse.ok</code>.</label>
+            <p class="explication" hidden>
+              Pour <code>fetch</code>, un 404 ou un 500 est une réponse comme une autre. C'est à toi de tester
+              <code>reponse.ok</code> (vrai pour les codes 200 à 299) et de traiter le reste comme une erreur.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="2">
+            <legend>2. Lequel de ces textes est du JSON valide ?</legend>
+            <label><input type="radio" name="q2" /> <code>{ titre: "Concert" }</code></label>
+            <label><input type="radio" name="q2" /> <code>{ "titre": "Concert", "gratuit": true }</code></label>
+            <label><input type="radio" name="q2" /> <code>{ "titre": "Concert", }</code></label>
+            <p class="explication" hidden>
+              En JSON, les noms des champs sont toujours entre guillemets doubles, et il n'y a pas de virgule après le
+              dernier élément. <code>true</code> s'écrit sans guillemets.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. Dans une API REST, comment supprimer l'événement n°12 ?</legend>
+            <label><input type="radio" name="q3" /> <code>DELETE /api/evenements/12</code></label>
+            <label><input type="radio" name="q3" /> <code>GET /api/supprimerEvenement?id=12</code></label>
+            <label><input type="radio" name="q3" /> <code>POST /api/evenements/supprimer</code></label>
+            <p class="explication" hidden>
+              L'adresse désigne la chose (l'événement 12), la méthode dit l'action (supprimer). Une suppression en
+              <code>GET</code> est même dangereuse : un simple lien, ou un robot qui parcourt les pages, pourrait
+              effacer des données.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

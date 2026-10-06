@@ -1,0 +1,9 @@
+{
+  "id": 1,
+  "titre": "Soirée privée",
+  "date": "2026-12-31",
+  "lieu": "Cocody",
+  "places": 50,
+  "gratuit": true,
+  "admin": true
+}

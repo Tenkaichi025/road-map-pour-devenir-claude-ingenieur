@@ -1,0 +1,36 @@
+body {
+  margin: 0 auto;
+  max-width: 40rem;
+  padding: 1.5rem 1rem;
+  font-family: Georgia, serif;
+  background: #f7f2e8;
+  color: #1f1f1f;
+}
+header {
+  border-bottom: 4px solid #c8462b;
+  margin-bottom: 1rem;
+}
+h1 {
+  margin: 0;
+}
+article {
+  border-bottom: 1px solid #ddd3c2;
+  padding: 0.6rem 0;
+}
+article h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+article p {
+  margin: 0.2rem 0 0;
+  color: #555;
+}
+.message {
+  font-style: italic;
+  color: #555;
+}
+button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+}

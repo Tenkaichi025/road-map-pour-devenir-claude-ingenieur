@@ -56,4 +56,7 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - Module 2 en cours : leçon 2.1 (cycle requête-réponse) rédigée. Exemple : réservation de salles en Node.js
   (`node:http`, sans dépendance). Exercices : `exercices/m2-01/` (serveur correct, serveur avec bug de double
   réservation ligne 58, fichiers JSON pour `curl.exe --data "@fichier"`). Codes vérifiés avec curl, y compris depuis PowerShell.
-- Ensuite : leçon 2.2 (API et JSON).
+- Leçon 2.2 (API REST et JSON) rédigée. Exemple : agenda d'événements d'Abidjan. `exercices/m2-02/` : API REST
+  complète + page aux 4 états (port 3002), API bugguée à auditer (port 3003, 6 problèmes + plantage sur JSON cassé),
+  fichiers de requêtes dont un titre piégé (XSS). Vérifié : codes via curl, 4 états et titre piégé dans Chrome.
+- Ensuite : leçon 2.3 (base de données, `node:sqlite`).

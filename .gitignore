@@ -1,0 +1,7 @@
+# Secrets : ne jamais versionner
+.env
+
+# Outillage vidéo
+node_modules/
+video/out/
+*.mp4

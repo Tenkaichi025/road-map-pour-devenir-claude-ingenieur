@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gérer les secrets et le .env · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m3-03">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 3.3</p>
+          <h1>Gérer les secrets et le .env</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Un <strong>secret</strong>, c'est tout ce qui donne un accès : une clé d'API (pour envoyer des SMS, encaisser
+            un paiement, envoyer des e-mails), le mot de passe d'une base de données, le secret qui signe les sessions.
+            Celui qui le possède peut agir et dépenser <strong>en ton nom</strong>.
+          </p>
+          <p>
+            Or le code est fait pour être copié : sur GitHub, chez un collègue, dans une conversation avec l'IA, dans
+            des sauvegardes. Un secret écrit dans le code part avec lui. Et une fois commité, il reste
+            <strong>pour toujours dans l'historique git</strong>, même si tu le retires au commit suivant.
+          </p>
+          <p>
+            La règle : le code ne contient que le <strong>nom</strong> du secret, et lit sa valeur dans l'environnement :
+            <code>process.env.CLE_API_SMS</code>. En local, la valeur vit dans un fichier <code>.env</code>, que
+            <code>.gitignore</code> interdit à git de prendre. En production, c'est l'hébergeur qui la fournit. Enfin, un
+            fichier <code>.env.example</code>, lui commité, liste les noms attendus, <strong>sans les valeurs</strong>.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            La boutique de pagnes confirme chaque commande par SMS, grâce à un fournisseur fictif, « SMS CI ». Elle a
+            besoin de deux secrets : la clé de l'API SMS, et le secret de session qui signe le cookie de commande. Voici
+            ce que l'IA a écrit « juste pour tester » :
+          </p>
+          <pre><code>// TODO : déplacer ça ailleurs plus tard
+const CLE_API_SMS = "smsci_live_7d1f0c9a4b2e8d63f5a1c0b9e7d4a2f1";
+const SECRET_SESSION = "boutique-treichville-2026";
+
+console.log("Démarrage avec la clé SMS :", CLE_API_SMS);</code></pre>
+          <p>Et à côté :</p>
+          <pre><code># .env.example
+CLE_API_SMS=smsci_live_7d1f0c9a4b2e8d63f5a1c0b9e7d4a2f1
+SECRET_SESSION=boutique-treichville-2026
+
+# .gitignore
+node_modules/</code></pre>
+          <p>Cinq problèmes :</p>
+          <ul>
+            <li>La clé est <strong>écrite dans le code</strong>. Le « TODO » ne protège rien : le code partira tel quel au prochain commit.</li>
+            <li>Le secret de session est un <strong>mot facile à deviner</strong>, et lui aussi écrit dans le code.</li>
+            <li>La clé est <strong>affichée dans les journaux</strong> : quiconque voit les journaux du serveur la récupère.</li>
+            <li><code>.env.example</code>, qui est commité, contient les <strong>vraies valeurs</strong>.</li>
+            <li><code>.gitignore</code> n'interdit pas <code>.env</code> : le jour où quelqu'un le crée, il partira avec <code>git add .</code>.</li>
+          </ul>
+
+          <h3>La version corrigée</h3>
+          <pre><code>const path = require("node:path");
+
+// En local : les valeurs viennent du fichier .env (ignoré par git).
+// En production : l'hébergeur fournit les variables, il n'y a pas de fichier .env.
+try {
+  process.loadEnvFile(path.join(__dirname, ".env"));
+} catch {
+  // pas de fichier .env : on compte sur les variables de l'hébergeur
+}
+const { CLE_API_SMS, SECRET_SESSION } = process.env;
+if (!CLE_API_SMS || !SECRET_SESSION || SECRET_SESSION.length &lt; 32) {
+  console.error("Configuration incomplète : copie .env.example en .env et remplis-le.");
+  process.exit(1);   // on refuse de démarrer, plutôt que de tourner avec un secret par défaut
+}</code></pre>
+          <pre><code># .env.example : commité, SANS valeurs
+CLE_API_SMS=
+SECRET_SESSION=
+
+# .gitignore
+node_modules/
+.env
+.env.*
+!.env.example</code></pre>
+          <p>
+            <code>.env.*</code> couvre aussi <code>.env.local</code> ou <code>.env.production</code>, et
+            <code>!.env.example</code> autorise l'exemple. Pour fabriquer un secret de session solide (long et aléatoire),
+            une ligne suffit :
+          </p>
+          <pre><code>node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"</code></pre>
+          <p>
+            <code>process.loadEnvFile</code> existe depuis Node 20.12. Avec une version plus ancienne, lance
+            <code>node --env-file=.env serveur.js</code>, ou utilise le paquet <code>dotenv</code>.
+          </p>
+
+          <h3>Le piège de l'historique git</h3>
+          <p>
+            Imagine que la clé a été commitée, puis retirée au commit suivant. Le code actuel est propre… mais git garde
+            <strong>chaque version</strong> de chaque fichier. Deux commandes suffisent pour la retrouver :
+          </p>
+          <pre><code>git log -S "smsci_live" --oneline      # les commits où ce texte apparaît ou disparaît
+git show 6a94162                       # le contenu exact de ce commit, clé comprise</code></pre>
+          <p>
+            Si le dépôt a été poussé sur GitHub, même quelques minutes, considère la clé comme
+            <strong>publique</strong>. Des robots parcourent GitHub en permanence à la recherche de clés, et la clé a pu
+            être copiée dans des clones, des forks ou des sauvegardes. Supprimer le dépôt ou réécrire l'historique
+            n'efface pas ces copies.
+          </p>
+
+          <h3>La procédure de réaction, dans cet ordre</h3>
+          <ol>
+            <li>
+              <strong>Changer la clé chez le fournisseur, tout de suite.</strong> Dans son tableau de bord, révoque
+              l'ancienne clé et crée-en une nouvelle. C'est la seule étape qui rend la clé publiée inutilisable : tout le
+              reste vient après.
+            </li>
+            <li>Mettre la nouvelle clé dans <code>.env</code> (et chez l'hébergeur), puis redémarrer l'application.</li>
+            <li>Regarder les journaux d'utilisation du fournisseur depuis la fuite : SMS envoyés, paiements, connexions inconnues.</li>
+            <li>Retirer la clé du code, et compléter <code>.gitignore</code> et <code>.env.example</code>.</li>
+            <li>
+              Nettoyer l'historique avec <code>git filter-repo</code> (installation : <code>python -m pip install git-filter-repo</code>),
+              puis <code>git push --force</code>, et prévenir les autres personnes du projet : elles devront récupérer
+              le dépôt à nouveau. Cette étape empêche de nouvelles copies, mais ne rattrape pas celles déjà faites :
+              c'est pour ça que l'étape 1 passe avant.
+            </li>
+          </ol>
+          <pre><code># expressions.txt : une ligne par secret à effacer de tout l'historique
+regex:smsci_live_[0-9a-f]{32}
+
+git filter-repo --replace-text expressions.txt --force
+# la clé devient « ***REMOVED*** » dans tous les commits</code></pre>
+          <p>
+            Sur GitHub, active aussi le <strong>secret scanning</strong> et la <strong>push protection</strong> du
+            dépôt : GitHub bloque alors un envoi qui contient une clé de format connu.
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 304" role="img" aria-labelledby="schema-33-titre schema-33-desc">
+              <title id="schema-33-titre">Où vit un secret, et ce que garde l'historique git</title>
+              <desc id="schema-33-desc">
+                Un secret écrit dans le code part avec chaque commit : GitHub, clones, historique. Un secret dans le
+                fichier .env reste sur la machine, est ignoré par git, et le code le lit avec process.env. En dessous,
+                trois commits : le premier ajoute la clé, le deuxième la retire, le code actuel est propre, mais git log
+                -S retrouve toujours la clé dans le premier commit. Si une clé est publiée : la changer chez le
+                fournisseur, la mettre dans .env, vérifier son usage, puis nettoyer l'historique.
+              </desc>
+
+              <text class="s-note" x="0" y="14">où vit le secret ?</text>
+              <rect class="s-boite-contenu" x="1" y="24" width="148" height="88" />
+              <text class="s-ui-laterite" x="75" y="46" text-anchor="middle">Dans le code</text>
+              <text class="s-code" x="75" y="68" text-anchor="middle">CLE = "smsci…"</text>
+              <text class="s-note s-note-laterite" x="75" y="88" text-anchor="middle">part avec chaque commit :</text>
+              <text class="s-note s-note-laterite" x="75" y="103" text-anchor="middle">GitHub, clones, historique</text>
+
+              <rect class="s-cadre" x="171" y="24" width="148" height="88" />
+              <text class="s-ui" x="245" y="46" text-anchor="middle">Dans .env</text>
+              <text class="s-code" x="245" y="68" text-anchor="middle">process.env.CLE</text>
+              <text class="s-note" x="245" y="88" text-anchor="middle">reste sur la machine,</text>
+              <text class="s-note" x="245" y="103" text-anchor="middle">ignoré par git</text>
+
+              <g class="s-filet"><line x1="0" y1="128" x2="320" y2="128" /></g>
+              <text class="s-note" x="0" y="150">l'historique garde tout :</text>
+              <line class="s-route" x1="20" y1="174" x2="300" y2="174" />
+              <circle class="s-laterite" cx="20" cy="174" r="9" />
+              <circle class="s-station" cx="160" cy="174" r="7" />
+              <circle class="s-station" cx="300" cy="174" r="7" />
+              <text class="s-note" x="4" y="202">ajoute la clé</text>
+              <text class="s-note" x="160" y="202" text-anchor="middle">retire la clé</text>
+              <text class="s-note" x="316" y="202" text-anchor="end">aujourd'hui</text>
+              <text class="s-note s-note-laterite" x="4" y="218">elle y est toujours</text>
+              <text class="s-note" x="160" y="218" text-anchor="middle">code propre</text>
+              <text class="s-note" x="316" y="218" text-anchor="end">git log -S la trouve</text>
+
+              <g class="s-filet"><line x1="0" y1="236" x2="320" y2="236" /></g>
+              <text class="s-ui-laterite" x="0" y="258">Clé publiée ? Dans cet ordre :</text>
+              <text class="s-note" x="0" y="278">1. la changer chez le fournisseur  2. la mettre dans .env</text>
+              <text class="s-note" x="0" y="296">3. vérifier son usage  4. nettoyer l'historique</text>
+            </svg>
+            <figcaption>
+              Retirer une clé du code ne la retire pas de l'historique. Et nettoyer l'historique ne rattrape pas les
+              copies déjà faites : seule la changer chez le fournisseur la rend inutilisable.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Quand l'IA touche à une configuration, une clé ou un mot de passe :</p>
+          <ul class="liste-verif">
+            <li>Aucune valeur secrète dans le code, même « pour tester », même avec un <code>TODO</code> à côté.</li>
+            <li>Pas de secret par défaut : <code>process.env.SECRET || "secret123"</code> cache une configuration manquante. Le programme doit refuser de démarrer.</li>
+            <li>Les secrets ne sont jamais écrits dans les journaux : méfie-toi de <code>console.log(process.env)</code> et des messages de démarrage « pour vérifier ».</li>
+            <li><code>.env.example</code> ne contient que des noms, avec des valeurs vides ou visiblement fictives.</li>
+            <li>
+              <code>.gitignore</code> contient <code>.env</code>, <code>.env.*</code> et <code>!.env.example</code>.
+              Vérifie-le <strong>avant le premier commit</strong> avec <code>git check-ignore -v .env</code>.
+            </li>
+            <li>Un secret de session est long et aléatoire (<code>crypto.randomBytes</code>), jamais un mot ou une phrase.</li>
+            <li>
+              Aucun secret dans le code envoyé au navigateur. Tout ce qui est dans le JavaScript de la page est public,
+              y compris les variables <code>VITE_…</code> ou <code>NEXT_PUBLIC_…</code>. Un appel avec une clé privée
+              passe toujours par ton serveur.
+            </li>
+            <li>Ne colle jamais tes vraies clés dans une conversation avec une IA. Donne-lui le nom de la variable, pas sa valeur.</li>
+            <li>Avant de rendre un dépôt public : audit du dossier <strong>et</strong> de son historique.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Le code contient le nom du secret (<code>process.env.CLE</code>), jamais sa valeur.</li>
+            <li><code>.env</code> : les valeurs, ignoré par git. <code>.env.example</code> : les noms, sans valeurs, commité.</li>
+            <li>Ce qui a été commité reste dans l'historique : <code>git log -S</code> le retrouve.</li>
+            <li>Clé publiée : d'abord la changer chez le fournisseur. Nettoyer l'historique vient après.</li>
+            <li>Tout ce qui est envoyé au navigateur est public : une clé privée reste sur le serveur.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans <code>exercices/m3-03/</code>. Toutes les clés sont fictives : le fournisseur « SMS
+            CI » n'existe pas. Deux outils t'aident :
+          </p>
+          <ul>
+            <li><code>node audit-secrets.js &lt;dossier&gt;</code> fouille le code, les fichiers <code>.env</code>, le <code>.gitignore</code> et l'historique git. Il affiche les secrets masqués.</li>
+            <li><code>node preparer-depot.js &lt;dossier&gt;</code> crée un dépôt d'entraînement avec une clé oubliée dans l'historique.</li>
+          </ul>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Sortir les secrets du code de la boutique</h3>
+            <ol>
+              <li>Copie le dossier <code>exercices/m3-03/boutique-sms</code> dans un dossier de travail, en dehors du cours (par exemple <code>C:\exos\boutique-sms</code>). Dans la copie, tape <code>git init</code>.</li>
+              <li>Depuis <code>exercices/m3-03/outils</code>, audite ta copie : <code>node audit-secrets.js C:\exos\boutique-sms</code>. Note les alertes.</li>
+              <li>Dans <code>serveur.js</code>, remplace les deux constantes et le <code>console.log</code> par la version corrigée de la leçon.</li>
+              <li>Vide les valeurs de <code>.env.example</code>, et complète <code>.gitignore</code>.</li>
+              <li>Lance <code>node serveur.js</code> : le serveur doit refuser de démarrer.</li>
+              <li>Copie <code>.env.example</code> en <code>.env</code>. Mets une clé SMS inventée et un secret généré avec la commande de la leçon. Relance : le serveur démarre.</li>
+              <li>
+                Teste une commande :
+                <code>curl.exe -s -X POST http://localhost:3010/api/commande -H "Content-Type: application/json" --data "@commande.json"</code>.
+              </li>
+              <li>Vérifie que <code>.env</code> est ignoré : <code>git check-ignore -v .env</code>. Puis relance l'audit.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 5 alertes au départ, puis un serveur qui refuse de démarrer sans
+              <code>.env</code>, une commande qui passe (201), <code>.env</code> ignoré par git, et « Aucune alerte » à la
+              fin.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Pour copier un fichier dans PowerShell : <code>Copy-Item .env.example .env</code>.</p>
+              <p><code>git check-ignore -v .env</code> n'affiche rien ? Alors <code>.env</code> n'est pas ignoré : relis ton <code>.gitignore</code>.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li>Les 5 alertes : la clé dans <code>serveur.js</code>, le secret de session dans <code>serveur.js</code>, <code>.gitignore</code> sans <code>.env</code>, et deux valeurs dans <code>.env.example</code>.</li>
+                <li>Sans <code>.env</code> : « Configuration incomplète… », et le programme s'arrête. C'est voulu : un serveur qui démarre avec un secret manquant ou par défaut est pire qu'un serveur arrêté.</li>
+                <li><code>git check-ignore -v .env</code> affiche <code>.gitignore:2:.env  .env</code> : la ligne 2 du <code>.gitignore</code> protège le fichier.</li>
+                <li>Dans le terminal du serveur, la clé n'apparaît plus qu'en partie (<code>smsci_live_…</code>), et le message de démarrage ne l'affiche plus.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>La clé oubliée dans l'historique</h3>
+            <ol>
+              <li>Depuis <code>exercices/m3-03/outils</code> : <code>node preparer-depot.js C:\exos\depot-fuite</code>.</li>
+              <li>Dans <code>C:\exos\depot-fuite</code>, regarde <code>sms.js</code> : la clé n'y est plus. Puis <code>git log --oneline</code>.</li>
+              <li>Retrouve-la : <code>git log -S "smsci_live" --oneline</code>, puis <code>git show</code> suivi du plus ancien numéro de commit affiché.</li>
+              <li>Lance l'audit sur ce dépôt.</li>
+              <li>
+                Demande à Claude : « J'ai commité une clé d'API SMS il y a deux commits, puis je l'ai retirée du code. Le
+                dépôt est sur GitHub. Que dois-je faire ? » Compare sa réponse avec la procédure de la leçon :
+                commence-t-il par changer la clé chez le fournisseur ?
+              </li>
+              <li>Nettoie l'historique avec <code>git filter-repo</code> (voir la leçon), puis relance <code>git log -S</code> et l'audit.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> la clé retrouvée dans le commit « Ajoute l'envoi de SMS », une seule
+              alerte d'audit (dans l'historique), une analyse critique de la réponse de Claude, puis plus aucune trace
+              après le nettoyage.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p><code>git filter-repo</code> lit un fichier de remplacements. Crée <code>expressions.txt</code> à côté du dépôt (pas dedans), avec une seule ligne : <code>regex:smsci_live_[0-9a-f]{32}</code>.</p>
+              <p>Si la commande <code>git filter-repo</code> est introuvable après l'installation, essaie <code>python -m git_filter_repo</code> à la place.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li><code>git log -S</code> affiche deux commits : celui qui a <strong>ajouté</strong> la clé et celui qui l'a <strong>retirée</strong>. <code>git show</code> sur le plus ancien affiche la clé en clair.</li>
+                <li>L'audit : une alerte, « ajouté(e) dans le commit … Ajoute l'envoi de SMS ». Le code actuel est propre : seul l'historique la contient.</li>
+                <li>
+                  Une bonne réponse de Claude commence par « révoque et remplace la clé chez le fournisseur ». Si elle
+                  commence par réécrire l'historique, ou se contente de dire de supprimer le fichier, c'est incomplet :
+                  la clé a pu être copiée dès sa publication.
+                </li>
+                <li>Après <code>git filter-repo --replace-text expressions.txt --force</code>, <code>git log -S</code> n'affiche plus rien, le premier commit contient <code>***REMOVED***</code>, et l'audit ne donne plus aucune alerte.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>L'inventaire des secrets de ton projet</h3>
+            <p>
+              Lance l'audit sur un de tes projets (par exemple Royal Senteur) : le dossier et son historique. Puis dresse
+              l'inventaire de ses secrets : leur nom, le service auquel ils donnent accès, et l'endroit où vit chacun
+              (code, <code>.env</code>, hébergeur, navigateur). Vérifie <code>.gitignore</code> et
+              <code>.env.example</code>. Si une clé est dans l'historique d'un dépôt qui a été public, applique la
+              procédure, en commençant par l'étape 1.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un inventaire complet (nom, service, emplacement, verdict), et pour
+              chaque problème la correction faite.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Cherche aussi dans le code envoyé au navigateur : les fichiers construits (dossier <code>dist</code> ou <code>build</code>) et les variables <code>VITE_…</code> / <code>NEXT_PUBLIC_…</code>.</li>
+                <li>Pense aux secrets qui ne ressemblent pas à des clés : mot de passe de la base de données, identifiants SMTP pour les e-mails, mot de passe de l'espace d'administration.</li>
+                <li>Chez ton hébergeur (Vercel, Netlify, un VPS…), repère où se règlent les variables d'environnement de production.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="1">
+            <legend>1. Tu as commité une clé d'API, puis tu l'as retirée au commit suivant. Le dépôt est public depuis hier. Que fais-tu en premier ?</legend>
+            <label><input type="radio" name="q1" /> Je change la clé chez le fournisseur : l'ancienne devient inutilisable.</label>
+            <label><input type="radio" name="q1" /> Je nettoie l'historique avec <code>git filter-repo</code>.</label>
+            <label><input type="radio" name="q1" /> Je passe le dépôt en privé.</label>
+            <p class="explication" hidden>
+              La clé a pu être copiée dès sa publication, par des robots qui surveillent GitHub. Seule sa révocation chez
+              le fournisseur la rend inutile. Nettoyer l'historique et cacher le dépôt viennent ensuite : ils évitent de
+              nouvelles copies, pas celles déjà faites.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. Que doit contenir le fichier <code>.env.example</code> ?</legend>
+            <label><input type="radio" name="q2" /> Les vraies valeurs, pour que l'équipe puisse démarrer vite.</label>
+            <label><input type="radio" name="q2" /> Rien : il ne sert à rien si on a un <code>.env</code>.</label>
+            <label><input type="radio" name="q2" /> Les noms des variables attendues, avec des valeurs vides ou fictives.</label>
+            <p class="explication" hidden>
+              <code>.env.example</code> est commité : il documente ce qu'il faut configurer. Chaque personne copie ce
+              fichier en <code>.env</code> et y met ses propres valeurs, qui ne quittent jamais sa machine.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="2">
+            <legend>3. L'IA place la clé de l'API SMS dans le JavaScript de la page, pour appeler le fournisseur directement depuis le navigateur. Problème ?</legend>
+            <label><input type="radio" name="q3" /> Aucun, si le fichier est minifié.</label>
+            <label><input type="radio" name="q3" /> Oui : tout ce qui est envoyé au navigateur est public. L'appel doit passer par ton serveur, qui seul connaît la clé.</label>
+            <label><input type="radio" name="q3" /> Aucun, si la clé est dans une variable <code>VITE_</code> ou <code>NEXT_PUBLIC_</code>.</label>
+            <p class="explication" hidden>
+              N'importe quel visiteur peut lire le code de la page, minifié ou non (<kbd>F12</kbd>). Les préfixes
+              <code>VITE_</code> et <code>NEXT_PUBLIC_</code> signifient justement « à envoyer au navigateur ». Une clé
+              privée reste côté serveur.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

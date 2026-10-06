@@ -49,6 +49,7 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   remplacée par `white-space: nowrap` sur le titre. Leçon : toujours vérifier qu'un bug « pédagogique » se produit vraiment.
 
 ## Dépendances & Commandes clés
+- Exercice 3.3 : `python -m pip install git-filter-repo` (nettoyage d'historique, dépôt d'entraînement uniquement).
 - Aucune dépendance pour le site. Ouvrir `index.html`.
 - Serveur local facultatif : `python -m http.server 8000`.
 
@@ -81,4 +82,9 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   `exercices/m3-02/avis` (port 3009 : liste serveur stockée, recherche réfléchie, innerHTML, sans CSP),
   `avis/verifier.js` (8 tests : 3/8 version fournie, 8/8 version corrigée ; vérifié aussi dans Chrome : gras vs texte,
   CSP sans casse), `outils/audit-xss.js` (premier tri ; rate le gabarit multi-lignes de la recherche).
-- Ensuite : leçon 3.3 (secrets et variables d'environnement).
+- Leçon 3.3 (secrets et .env) rédigée. `exercices/m3-03/boutique-sms` (port 3010 : clé et secret en dur, clé dans les
+  journaux, .env.example avec valeurs, .gitignore sans .env), `outils/audit-secrets.js` (code, .env/.gitignore,
+  .env.example, historique git ; secrets masqués), `outils/preparer-depot.js` (dépôt d'entraînement hors du cours).
+  Clés FICTIVES au préfixe `smsci_live_` (pas de vrai format, pour ne pas déclencher la push protection de GitHub).
+  Testé : version corrigée (refus sans .env, 201 avec), git log -S, git filter-repo → ***REMOVED***, audit à 0.
+- Ensuite : leçon 3.4 (HTTPS).

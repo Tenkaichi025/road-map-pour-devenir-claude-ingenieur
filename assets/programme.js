@@ -31,7 +31,7 @@ const PROGRAMME = [
     lecons: [
       { id: "m3-01", titre: "Injection SQL : auditer ses requêtes", pret: true },
       { id: "m3-02", titre: "Faille XSS : protéger l'affichage", pret: true },
-      { id: "m3-03", titre: "Variables d'environnement et secrets", pret: false },
+      { id: "m3-03", titre: "Gérer les secrets et le .env", pret: true },
       { id: "m3-04", titre: "HTTPS", pret: false },
       { id: "m3-05", titre: "Authentification sécurisée et droits d'accès", pret: false },
     ],

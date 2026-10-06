@@ -22,7 +22,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 ## Fonctionnalités développées & Restantes
 - Fait : structure, accueil, route, suivi de progression, gabarit de leçon, quiz interactif, schéma SVG par leçon.
   **Parcours complet : 4 modules, 20 leçons** (60 exercices, 60 questions), outils d'exercice tous vérifiés.
-- Restant : validation finale de Wilfried, puis mise en ligne sur GitHub Pages (aucun dépôt distant configuré).
+- Dépôt public : https://github.com/Tenkaichi025/road-map-pour-devenir-claude-ingenieur (branche main).
+- Restant : activer GitHub Pages (branche main, dossier racine).
 
 ## Dernières modifications importantes
 - 2026-10-06 : leçon 4.6 (créer ses propres skills), dernière du parcours. Modules 2 à 4 rédigés et validés un à un.
@@ -137,4 +138,4 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   description avec déclencheur, scripts cités, allowed-tools, secrets). Les 3 SKILL.md de la leçon sont ceux testés.
   Vérifié : audit 6 constats ; mutation-guard 57 % → 100 % avec 3 tests ; relecture : décision DEMANDER UNE CORRECTION.
   **Module 4 terminé — parcours complet.**
-- Ensuite : validation de Wilfried, puis publication GitHub Pages (créer le dépôt distant, activer Pages sur main).
+- Dépôt GitHub public créé et poussé (2026-10-06). Ensuite : activer GitHub Pages sur main.

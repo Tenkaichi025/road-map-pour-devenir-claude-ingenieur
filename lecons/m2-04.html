@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Authentifier les utilisateurs · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m2-04">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 2.4</p>
+          <h1>Authentifier les utilisateurs</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            <strong>S'authentifier</strong>, c'est prouver qui on est : l'e-mail et le mot de passe. Le serveur ne garde
+            jamais le mot de passe lui-même. Il garde une <strong>empreinte</strong> (un <em>hash</em>) : un calcul à
+            sens unique, impossible à remonter. À la connexion, il refait le calcul et compare. Si la base fuit un
+            jour, les mots de passe ne sont pas lisibles.
+          </p>
+          <p>
+            HTTP n'a aucune mémoire : chaque requête arrive seule, sans savoir qui l'envoie. Après une connexion
+            réussie, le serveur remet donc un <strong>ticket</strong> au navigateur, rangé dans un
+            <strong>cookie</strong>. Le navigateur le renvoie tout seul à chaque requête suivante. C'est la
+            <strong>session</strong>.
+          </p>
+          <p>
+            Il existe une autre approche, le <strong>JWT</strong> : un jeton signé qui contient lui-même les
+            informations (qui tu es, jusqu'à quand). C'est pratique quand plusieurs serveurs doivent le lire. Mais on
+            ne peut pas facilement l'annuler avant son expiration, et l'IA le range souvent dans le
+            <code>localStorage</code>, où n'importe quel script de la page peut le lire. Pour un site classique, une
+            session dans un cookie protégé est plus simple et plus sûre.
+          </p>
+          <p>
+            Enfin, le <strong>contrôle d'accès</strong> : chaque route privée doit vérifier la session avant de
+            répondre. Il suffit d'<strong>une</strong> route oubliée pour tout exposer.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Un espace membre avec une page de connexion et des notes privées. Tout est en Node.js natif :
+            <code>node:crypto</code> pour le hachage, <code>node:sqlite</code> pour les comptes. Rien à installer.
+          </p>
+
+          <h3>Hacher le mot de passe</h3>
+          <pre><code>const crypto = require("node:crypto");
+
+function hacher(motDePasse) {
+  const sel = crypto.randomBytes(16);                        // un sel différent pour chaque compte
+  const empreinte = crypto.scryptSync(motDePasse, sel, 64);  // lent exprès
+  return `${sel.toString("hex")}:${empreinte.toString("hex")}`;
+}
+
+function verifierMotDePasse(motDePasse, stocke) {
+  const [selHex, empreinteHex] = stocke.split(":");
+  const attendue = Buffer.from(empreinteHex, "hex");
+  const calculee = crypto.scryptSync(motDePasse, Buffer.from(selHex, "hex"), 64);
+  return crypto.timingSafeEqual(attendue, calculee);         // comparaison en temps constant
+}</code></pre>
+          <ul>
+            <li>
+              Le <strong>sel</strong> est une valeur aléatoire ajoutée au mot de passe avant le calcul. Deux personnes
+              avec le même mot de passe obtiennent donc deux empreintes différentes, et les listes d'empreintes
+              précalculées ne servent à rien.
+            </li>
+            <li>
+              <code>scrypt</code> est <strong>lent exprès</strong> (environ 70 ms) : invisible pour un visiteur, mais
+              un attaquant qui veut tester des millions de mots de passe est fortement ralenti. <code>md5</code> ou
+              <code>sha256</code> seuls sont beaucoup trop rapides pour cet usage.
+            </li>
+          </ul>
+
+          <h3>Se connecter : vérifier, puis donner un ticket</h3>
+          <pre><code>const utilisateur = sql.utilisateurParEmail.get(email);
+const correct = utilisateur &amp;&amp; verifierMotDePasse(motDePasse, utilisateur.hash);
+if (!correct) return repondre(res, 401, { erreur: "E-mail ou mot de passe incorrect." });
+
+const idSession = crypto.randomBytes(32).toString("base64url");   // impossible à deviner
+sessions.set(idSession, { utilisateurId: utilisateur.id, expire: Date.now() + 2 * 3600 * 1000 });
+res.setHeader("Set-Cookie", `session=${idSession}; HttpOnly; SameSite=Lax; Path=/; Max-Age=7200`);</code></pre>
+          <p>
+            Le message d'erreur est le même, que l'e-mail existe ou non. Sinon, un inconnu pourrait tester une liste
+            d'e-mails pour savoir lesquels ont un compte.
+          </p>
+
+          <h3>Les options du cookie</h3>
+          <div class="tableau">
+            <table>
+              <thead>
+                <tr><th>Option</th><th>Ce qu'elle protège</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>HttpOnly</code></td><td>Le JavaScript de la page ne peut pas lire le cookie. Un script injecté (faille XSS, leçon 3.2) ne peut donc pas voler la session.</td></tr>
+                <tr><td><code>SameSite=Lax</code></td><td>Le cookie n'est pas envoyé quand un <strong>autre site</strong> soumet un formulaire vers le tien. C'est la protection contre la faille CSRF.</td></tr>
+                <tr><td><code>Secure</code></td><td>Le cookie ne voyage qu'en HTTPS. Obligatoire en ligne (absent ici, car <code>localhost</code> est en HTTP).</td></tr>
+                <tr><td><code>Max-Age</code></td><td>La session expire : un cookie volé ne sert pas éternellement.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            La faille <strong>CSRF</strong>, c'est quand un site piégé fait envoyer une requête à ton site par le
+            navigateur du visiteur, avec son cookie, et donc en son nom. Par exemple : « supprimer mon compte ».
+          </p>
+
+          <h3>La garde, en tête de chaque route privée</h3>
+          <pre><code>function exigerConnexion(req, res) {
+  const id = lireCookies(req).session;
+  const session = id &amp;&amp; sessions.get(id);
+  if (!session || session.expire &lt; Date.now()) {
+    repondre(res, 401, { erreur: "Connecte-toi d'abord." });
+    return null;
+  }
+  return session.utilisateurId;
+}
+
+// Chaque route privée commence ainsi :
+const moi = exigerConnexion(req, res);
+if (!moi) return;
+return repondre(res, 200, sql.notesDe.all(moi));     // seulement SES notes</code></pre>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 356" role="img" aria-labelledby="schema-24-titre schema-24-desc">
+              <title id="schema-24-titre">Une connexion, puis deux requêtes vers une route privée</title>
+              <desc id="schema-24-desc">
+                Le navigateur envoie POST /api/connexion avec l'e-mail et le mot de passe. Le serveur vérifie le hash et
+                crée une session, puis répond 200 avec un cookie session HttpOnly. Ensuite, le navigateur demande GET
+                /api/notes en renvoyant le cookie tout seul : la garde trouve la session et répond 200 avec les notes.
+                Une requête sans cookie reçoit 401 : connecte-toi d'abord.
+              </desc>
+              <defs>
+                <marker id="fleche-24" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+                <marker id="fleche-24-l" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-laterite" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <text class="s-ui" x="44" y="16" text-anchor="middle">Navigateur</text>
+              <text class="s-ui" x="280" y="16" text-anchor="middle">Serveur</text>
+              <text class="s-note" x="320" y="32" text-anchor="end">sessions en mémoire</text>
+              <line class="s-repere" x1="40" y1="40" x2="40" y2="340" />
+              <line class="s-repere" x1="280" y1="40" x2="280" y2="340" />
+
+              <text class="s-code" x="160" y="62" text-anchor="middle">POST /api/connexion</text>
+              <line class="s-trait" x1="44" y1="70" x2="274" y2="70" marker-end="url(#fleche-24)" />
+              <text class="s-note" x="160" y="86" text-anchor="middle">{ e-mail, mot de passe }</text>
+              <text class="s-note" x="160" y="104" text-anchor="middle">le serveur vérifie le hash, crée une session</text>
+              <text class="s-code s-code-fort" x="160" y="126" text-anchor="middle">200 OK</text>
+              <line class="s-trait" x1="276" y1="134" x2="46" y2="134" marker-end="url(#fleche-24)" />
+              <text class="s-note s-note-laterite" x="160" y="150" text-anchor="middle">Set-Cookie: session=x7Qp… HttpOnly</text>
+
+              <text class="s-code" x="160" y="178" text-anchor="middle">GET /api/notes</text>
+              <line class="s-trait" x1="44" y1="186" x2="274" y2="186" marker-end="url(#fleche-24)" />
+              <text class="s-note" x="160" y="202" text-anchor="middle">Cookie: session=x7Qp… (envoyé tout seul)</text>
+              <text class="s-code s-code-fort" x="160" y="226" text-anchor="middle">200 OK · tes notes</text>
+              <line class="s-trait" x1="276" y1="234" x2="46" y2="234" marker-end="url(#fleche-24)" />
+              <text class="s-note" x="160" y="250" text-anchor="middle">la garde a trouvé la session</text>
+
+              <text class="s-code" x="160" y="278" text-anchor="middle">GET /api/notes</text>
+              <line class="s-trait" x1="44" y1="286" x2="274" y2="286" marker-end="url(#fleche-24)" />
+              <text class="s-note" x="160" y="302" text-anchor="middle">sans cookie</text>
+              <text class="s-code s-code-laterite" x="160" y="326" text-anchor="middle">401</text>
+              <line class="s-lien" x1="276" y1="334" x2="46" y2="334" marker-end="url(#fleche-24-l)" />
+              <text class="s-note s-note-laterite" x="160" y="352" text-anchor="middle">« Connecte-toi d'abord. »</text>
+            </svg>
+            <figcaption>
+              Le ticket (le cookie de session) est un numéro aléatoire. Les informations sur l'utilisateur restent sur le
+              serveur, qui peut annuler la session à tout moment.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Quand l'IA code une inscription, une connexion ou une route privée :</p>
+          <ul class="liste-verif">
+            <li>
+              Aucun mot de passe en clair : la base contient une empreinte faite avec <code>scrypt</code>,
+              <code>bcrypt</code> ou <code>argon2</code>, avec un sel. Jamais <code>md5</code> ou <code>sha256</code>
+              seuls. Test : regarde la table.
+            </li>
+            <li>Le mot de passe n'est jamais renvoyé dans une réponse, ni écrit dans les journaux (<code>console.log</code> du corps reçu).</li>
+            <li>Même message d'erreur que l'e-mail existe ou non.</li>
+            <li>
+              Le cookie de session contient une valeur <strong>aléatoire et longue</strong>, jamais l'e-mail ou l'id
+              de l'utilisateur. Il a <code>HttpOnly</code> et <code>SameSite=Lax</code>, plus <code>Secure</code> en
+              ligne. Test : <kbd>F12</kbd> → Application → Cookies, puis <code>document.cookie</code> dans la Console ne
+              doit pas l'afficher.
+            </li>
+            <li>Aucun jeton de connexion dans le <code>localStorage</code> : tout script de la page peut le lire.</li>
+            <li>
+              <strong>Chaque</strong> route privée appelle la garde. Test : appelle chaque route sans cookie, tu dois
+              obtenir 401. Méfie-toi des routes « de débogage » ou « admin » ajoutées en passant.
+            </li>
+            <li>La déconnexion supprime la session <strong>côté serveur</strong>. Test : garde l'ancien cookie, et rappelle une route privée après la déconnexion : 401 attendu.</li>
+            <li>Les sessions expirent, et un mot de passe trop court est refusé à l'inscription.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>On ne stocke jamais un mot de passe : on stocke son empreinte, avec un sel et un algorithme lent.</li>
+            <li>Après la connexion, le serveur remet un ticket aléatoire dans un cookie. Le navigateur le renvoie tout seul.</li>
+            <li>Cookie de session : <code>HttpOnly</code>, <code>SameSite=Lax</code>, <code>Secure</code> en ligne, et une durée de vie.</li>
+            <li>Session dans un cookie pour un site classique. Jamais de jeton dans le <code>localStorage</code>.</li>
+            <li>Chaque route privée commence par la garde. Teste-les toutes sans cookie : 401 partout.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans <code>exercices/m2-04/</code>. Deux comptes de démonstration existent :
+            <code>awa@exemple.ci</code> (mot de passe <code>mangue-papaye-2026</code>) et <code>kofi@exemple.ci</code>
+            (mot de passe <code>kedjenou-du-dimanche</code>). Avec <code>curl.exe</code>, l'option <code>-c fichier</code>
+            enregistre les cookies reçus, et <code>-b fichier</code> les renvoie, comme le ferait un navigateur.
+          </p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Suivre une session de bout en bout</h3>
+            <ol>
+              <li>
+                Dans <code>exercices/m2-04/espace-membre</code>, lance <code>node serveur.js</code>. Ouvre
+                <code>http://localhost:3006</code> et connecte-toi avec le compte d'Awa : ses notes s'affichent.
+              </li>
+              <li>
+                <kbd>F12</kbd> → onglet <strong>Application</strong> → Cookies → <code>http://localhost:3006</code>.
+                Regarde la valeur du cookie <code>session</code> et la colonne <strong>HttpOnly</strong>.
+              </li>
+              <li>Dans l'onglet Console, tape <code>document.cookie</code>.</li>
+              <li>Déconnecte-toi. Essaie un mauvais mot de passe, puis un e-mail qui n'existe pas. Compare les deux messages.</li>
+              <li>Dans un deuxième terminal, depuis <code>exercices/m2-04/requetes</code> :</li>
+            </ol>
+            <pre><code>curl.exe -si http://localhost:3006/api/notes
+curl.exe -si -c cookies-awa.txt -X POST http://localhost:3006/api/connexion -H "Content-Type: application/json" --data "@connexion-awa.json"
+curl.exe -s -b cookies-awa.txt http://localhost:3006/api/notes
+curl.exe -si -b "session=awa@exemple.ci" http://localhost:3006/api/notes
+curl.exe -si -b cookies-awa.txt -X POST http://localhost:3006/api/deconnexion
+curl.exe -si -b cookies-awa.txt http://localhost:3006/api/notes</code></pre>
+            <ol start="6">
+              <li>Enfin, dans <code>exercices/m2-04/espace-membre</code> : <code>node sql.js "SELECT email, hash FROM utilisateurs"</code>.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> le cookie est long, aléatoire et marqué HttpOnly, et
+              <code>document.cookie</code> ne le montre pas. Les deux erreurs de connexion affichent le même message.
+              Côté <code>curl</code> : 401, 200, les notes, 401 avec le faux cookie, 204, puis 401. La base ne contient
+              que des empreintes.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Ouvre <code>cookies-awa.txt</code> dans ton éditeur : c'est le cookie que <code>curl</code> a reçu et qu'il renvoie avec <code>-b</code>.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li><code>document.cookie</code> renvoie <code>""</code> : grâce à <code>HttpOnly</code>, aucun script de la page ne peut lire la session. Le navigateur l'envoie pourtant à chaque requête.</li>
+                <li>Mauvais mot de passe ou e-mail inconnu : « E-mail ou mot de passe incorrect. » dans les deux cas.</li>
+                <li>Sans cookie : <code>401</code>. Après la connexion : <code>200</code> et un en-tête <code>Set-Cookie: session=…; HttpOnly; SameSite=Lax</code>.</li>
+                <li>Le faux cookie <code>session=awa@exemple.ci</code> donne <code>401</code> : il ne correspond à aucune session. Impossible de se faire passer pour Awa en connaissant son e-mail.</li>
+                <li>Après la déconnexion (<code>204</code>), l'ancien cookie ne marche plus (<code>401</code>) : la session a été supprimée sur le serveur.</li>
+                <li>La colonne <code>hash</code> contient <code>sel:empreinte</code> en hexadécimal. Aucune trace de <code>mangue-papaye-2026</code>.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire ajouter une route privée, puis essayer d'entrer chez le voisin</h3>
+            <ol>
+              <li>Copie le dossier <code>espace-membre</code> dans un dossier de travail. Dans la copie, demande à Claude :</li>
+            </ol>
+            <pre><code>Ajoute une route DELETE /api/notes/:id qui supprime une note de
+l'utilisateur connecté.</code></pre>
+            <ol start="2">
+              <li>Lance la copie, puis connecte Awa et Kofi, chacun avec son fichier de cookies :</li>
+            </ol>
+            <pre><code>curl.exe -s -c cookies-awa.txt -X POST http://localhost:3006/api/connexion -H "Content-Type: application/json" --data "@connexion-awa.json"
+curl.exe -s -c cookies-kofi.txt -X POST http://localhost:3006/api/connexion -H "Content-Type: application/json" --data "@connexion-kofi.json"</code></pre>
+            <ol start="3">
+              <li>
+                Teste, dans cet ordre : supprimer la note n°1 <strong>sans cookie</strong>, puis <strong>avec le cookie
+                de Kofi</strong> (la note n°1 appartient à Awa), puis avec le cookie d'Awa. Après chaque essai, relis
+                les notes d'Awa.
+              </li>
+            </ol>
+            <pre><code>curl.exe -si -X DELETE http://localhost:3006/api/notes/1
+curl.exe -si -b cookies-kofi.txt -X DELETE http://localhost:3006/api/notes/1
+curl.exe -si -b cookies-awa.txt -X DELETE http://localhost:3006/api/notes/1
+curl.exe -s -b cookies-awa.txt http://localhost:3006/api/notes</code></pre>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> sans cookie → 401. Kofi → 404, et la note d'Awa est toujours là.
+              Awa → 204, et la note a disparu.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>
+                Être connecté ne suffit pas : il faut aussi que la note appartienne à la personne connectée. Regarde la
+                requête SQL écrite par Claude : vérifie-t-elle à qui appartient la note ?
+              </p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>La bonne version vérifie les deux choses dans la même requête SQL :</p>
+              <pre><code>const moi = exigerConnexion(req, res);
+if (!moi) return;
+const { changes } = db
+  .prepare("DELETE FROM notes WHERE id = ? AND utilisateur_id = ?")
+  .run(Number(trouve[1]), moi);
+return changes === 0 ? repondre(res, 404, { erreur: "Note introuvable." }) : repondre(res, 204);</code></pre>
+              <p>
+                L'erreur classique : <code>DELETE FROM notes WHERE id = ?</code> seul. Kofi, connecté, peut alors
+                supprimer les notes de tout le monde, juste en changeant le numéro dans l'adresse. Il est
+                <em>authentifié</em>, mais il n'est pas <em>autorisé</em>. On creuse cette différence à la leçon 3.5.
+              </p>
+              <p>Pourquoi 404 plutôt que 403 ? Pour ne même pas révéler à Kofi que la note n°1 existe.</p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>L'espace membre « codé vite fait »</h3>
+            <p>
+              <code>exercices/m2-04/espace-bugge/</code> est le même espace membre, codé rapidement par une IA, sur le
+              port <strong>3007</strong>. La connexion fonctionne, les notes aussi. Trouve <strong>au moins 4 problèmes
+              de sécurité</strong>. Pour chacun, apporte une preuve (requête <code>curl.exe</code>, requête
+              <code>node sql.js</code> ou ligne de code) et explique ce qu'un attaquant pourrait en faire.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 4 problèmes prouvés. Dont au moins un qui te permet de lire les notes
+              d'Awa <strong>sans connaître son mot de passe</strong>.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Passe la liste « Vérifier le travail de l'IA » ligne par ligne.</li>
+                <li>Connecte-toi avec <code>curl.exe -si</code> et lis attentivement l'en-tête <code>Set-Cookie</code>.</li>
+                <li>Liste toutes les routes de <code>serveur.js</code>, et appelle chacune sans cookie.</li>
+                <li>Regarde la table <code>utilisateurs</code> avec <code>node sql.js</code>.</li>
+              </ul>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li><strong>Mots de passe en clair</strong> : la colonne <code>mot_de_passe</code> contient <code>mangue-papaye-2026</code>. Si la base fuit, tous les comptes tombent, et sans doute leurs autres comptes ailleurs, car beaucoup de gens réutilisent leurs mots de passe.</li>
+                <li>
+                  <strong>Cookie de session = l'e-mail</strong> : <code>Set-Cookie: session=awa@exemple.ci</code>, sans
+                  <code>HttpOnly</code> ni <code>SameSite</code>. Preuve :
+                  <code>curl.exe -s -b "session=awa@exemple.ci" http://localhost:3007/api/notes</code> renvoie les notes
+                  d'Awa. N'importe qui connaissant son e-mail entre chez elle. Et un script injecté pourrait lire le
+                  cookie.
+                </li>
+                <li>
+                  <strong>Route oubliée</strong> : <code>GET /api/admin/utilisateurs</code>, « ajoutée pour déboguer »,
+                  n'a aucune garde. Elle renvoie tous les comptes, <strong>avec les mots de passe</strong>, à
+                  n'importe qui.
+                </li>
+                <li>
+                  <strong>Messages qui trahissent</strong> : « Aucun compte avec cet e-mail. » (404) n'est pas le même
+                  message que « Mot de passe incorrect. » (401). Un attaquant peut savoir quels e-mails ont un compte.
+                </li>
+              </ol>
+              <p>
+                Bonus : aucune longueur minimale pour les mots de passe, pas d'expiration, et pas de route de
+                déconnexion. La correction complète, c'est le dossier <code>espace-membre</code> : compare les deux
+                fichiers <code>serveur.js</code>.
+              </p>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. La base de données de ton site fuite. Qu'est-ce qui protège les mots de passe de tes clients ?</legend>
+            <label><input type="radio" name="q1" /> Le HTTPS du site.</label>
+            <label><input type="radio" name="q1" /> Le fait de n'avoir stocké que des empreintes, avec un sel et un algorithme lent.</label>
+            <label><input type="radio" name="q1" /> L'option <code>HttpOnly</code> des cookies.</label>
+            <p class="explication" hidden>
+              HTTPS protège ce qui circule sur le réseau, et <code>HttpOnly</code> protège le cookie dans le navigateur.
+              Mais si la base elle-même fuit, seul le hachage protège les mots de passe : l'attaquant n'obtient que des
+              empreintes, très longues à attaquer une par une.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>2. Que garantit l'option <code>HttpOnly</code> d'un cookie ?</legend>
+            <label><input type="radio" name="q2" /> Le JavaScript de la page ne peut pas le lire.</label>
+            <label><input type="radio" name="q2" /> Il n'est envoyé qu'en HTTPS.</label>
+            <label><input type="radio" name="q2" /> Il est supprimé quand on ferme le navigateur.</label>
+            <p class="explication" hidden>
+              <code>HttpOnly</code> cache le cookie aux scripts : même un script malveillant injecté dans la page ne peut
+              pas le voler. C'est <code>Secure</code> qui le limite au HTTPS, et <code>Max-Age</code> qui règle sa durée.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>3. L'IA a ajouté une route <code>/api/admin/export</code> « pour déboguer ». Que vérifies-tu en premier ?</legend>
+            <label><input type="radio" name="q3" /> Qu'elle renvoie bien du JSON.</label>
+            <label><input type="radio" name="q3" /> Qu'elle répond rapidement.</label>
+            <label><input type="radio" name="q3" /> Qu'elle appelle la garde : sans cookie, elle doit répondre 401.</label>
+            <p class="explication" hidden>
+              Les routes ajoutées « en passant » sont les plus souvent oubliées par le contrôle d'accès. Appelle-la sans
+              cookie. Et si tu n'en as pas besoin en production, demande plutôt à l'IA de la supprimer.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

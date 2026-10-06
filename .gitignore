@@ -3,3 +3,6 @@
 
 # Bases SQLite des exercices (recréées automatiquement au lancement)
 *.db
+
+# Cookies enregistrés par curl pendant les exercices
+cookies-*.txt

@@ -40,6 +40,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - `node:sqlite` active les clés étrangères PAR DÉFAUT (contrairement au SQLite classique) : le bug réaliste n'est
   pas l'oubli du PRAGMA, mais `enableForeignKeyConstraints: false` ajouté pour « faire taire » une erreur.
 - Depuis Git Bash, `kill -INT` n'arrête pas un serveur Node sous Windows : tester les arrêts/redémarrages en PowerShell.
+- Mon propre serveur 2.4 renvoyait 400 à la déconnexion (corps vide → `JSON.parse("")` échoue) : trouvé par le test
+  « relire les notes après déconnexion ». Corrigé : corps vide = `{}`.
 - Chrome headless ne descend pas sous 500 px de large → tests mobiles via une iframe de 375 px.
 - Exercice « page qui déborde » : une longue URL ne débordait pas (Chrome coupe après les « / ») → cause
   remplacée par `white-space: nowrap` sur le titre. Leçon : toujours vérifier qu'un bug « pédagogique » se produit vraiment.
@@ -65,4 +67,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - Leçon 2.3 (SQLite) rédigée. Exemple : blog (articles + commentaires, brouillons). `exercices/m2-03/` : `blog/`
   (base.js, serveur.js port 3004, sql.js pour taper du SQL), `blog-bugge/` (port 3005 : injection, clés étrangères
   désactivées, commentaire orphelin accepté, connexion ouverte à chaque requête). Vérifié avec curl et PowerShell.
-- Ensuite : leçon 2.4 (authentification).
+- Leçon 2.4 (authentification) rédigée : `exercices/m2-04/espace-membre` (port 3006 : scrypt + sel, sessions en
+  mémoire, cookie HttpOnly/SameSite=Lax, garde `exigerConnexion`, page web) et `espace-bugge` (port 3007 : mots de
+  passe en clair, cookie = e-mail, route admin sans garde, messages qui révèlent les comptes).
+  **Module 2 terminé.**
+- Ensuite : module 3 (sécurité).

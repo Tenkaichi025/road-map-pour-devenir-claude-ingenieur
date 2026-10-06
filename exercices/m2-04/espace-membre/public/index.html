@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mon espace</title>
+    <style>
+      body { font-family: Georgia, serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; background: #f6f1e7; color: #1f1f1f; }
+      label { display: block; font-weight: bold; margin-top: 0.8rem; }
+      input { width: 100%; padding: 0.6rem; font-size: 1rem; box-sizing: border-box; }
+      button { margin-top: 1rem; padding: 0.6rem 1rem; font-size: 1rem; cursor: pointer; }
+      #message { color: #b9431f; font-weight: bold; }
+      li { padding: 0.3rem 0; }
+    </style>
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <h1>Mon espace</h1>
+    <p id="message" role="status"></p>
+
+    <form id="connexion" hidden>
+      <label for="email">E-mail</label>
+      <input id="email" name="email" type="email" autocomplete="username" required />
+      <label for="mdp">Mot de passe</label>
+      <input id="mdp" name="motDePasse" type="password" autocomplete="current-password" required />
+      <button type="submit">Se connecter</button>
+      <button type="button" id="inscrire">Créer un compte</button>
+    </form>
+
+    <section id="espace" hidden>
+      <p>Connecté en tant que <strong id="moi"></strong>.</p>
+      <h2>Mes notes privées</h2>
+      <ul id="notes"></ul>
+      <form id="ajout">
+        <label for="texte">Nouvelle note</label>
+        <input id="texte" name="texte" required />
+        <button type="submit">Ajouter</button>
+      </form>
+      <button type="button" id="deconnexion">Se déconnecter</button>
+    </section>
+  </body>
+</html>

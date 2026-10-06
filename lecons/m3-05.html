@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Contrôle d'accès et IDOR · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m3-05">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 3.5</p>
+          <h1>Contrôle d'accès et IDOR</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            L'<strong>authentification</strong> répond à « qui es-tu ? » (leçon 2.4). L'<strong>autorisation</strong>
+            répond à « as-tu le droit de faire <em>cette</em> action sur <em>cette</em> donnée ? ». Un site peut parfaitement
+            vérifier la première question et oublier la seconde.
+          </p>
+          <p>
+            C'est la faille <strong>IDOR</strong> (on dit aussi <strong>BOLA</strong> pour les API). L'adresse contient le
+            numéro de la ressource : <code>/api/factures/3</code>. Si le serveur vérifie seulement que tu es connecté, il
+            suffit de changer le numéro pour lire, modifier ou supprimer la facture d'un autre client. C'est la faille
+            n°1 du classement OWASP des risques des API, et l'une des plus fréquentes dans le code généré par IA.
+          </p>
+          <p>
+            Sa cousine, c'est l'<strong>escalade de privilèges</strong> par copie du corps de la requête. Le serveur
+            recopie tout ce que le client envoie (<code>{ ...moi, ...corps }</code>). Le client ajoute alors
+            <code>"role": "admin"</code>… et il devient administrateur. La règle : le propriétaire et le rôle viennent
+            toujours de la <strong>session</strong> et de la <strong>base</strong>, jamais de ce que le client envoie.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Le tableau de bord de l'agence de comptabilité « Compta Plus ». Chaque client voit ses factures. Awa (Awa
+            Couture) a les factures n°1 et n°2, Kofi (Kofi Transport) les n°3 et n°4. Une administratrice voit tout. La
+            connexion est solide (leçon 2.4). Mais voici ce que l'IA a écrit pour une facture précise :
+          </p>
+          <pre><code>const facture = db.prepare("SELECT * FROM factures WHERE id = ?").get(id);   // n'importe quelle facture
+if (!facture) return repondre(res, 404, { erreur: "Facture introuvable." });
+
+if (req.method === "GET") return repondre(res, 200, facture);
+if (req.method === "PUT") db.prepare("UPDATE factures SET statut = ? WHERE id = ?").run(corps.statut, id);
+if (req.method === "DELETE") db.prepare("DELETE FROM factures WHERE id = ?").run(id);</code></pre>
+          <p>Et pour le profil, puis pour l'administration :</p>
+          <pre><code>// PUT /api/moi : « on met à jour avec ce que le client a envoyé »
+const misAJour = { ...moi, ...corps };
+db.prepare("UPDATE utilisateurs SET nom = ?, telephone = ?, role = ? WHERE id = ?")
+  .run(misAJour.nom, misAJour.telephone, misAJour.role, moi.id);
+
+// GET /api/admin/factures : protégée… par la seule connexion
+const moi = exigerConnexion(req, res);
+return repondre(res, 200, toutesLesFactures);</code></pre>
+          <p>
+            Résultat, avec le compte d'Awa : elle lit la facture n°3 de Kofi (1 200 000 FCFA), la marque comme payée,
+            supprime la n°4, envoie <code>"role": "admin"</code> dans son profil, et ouvre l'administration. Sans jamais
+            connaître le mot de passe de personne.
+          </p>
+
+          <h3>La version corrigée</h3>
+          <pre><code>// 1. Chaque requête sur une ressource précise contient la condition de propriété.
+//    moi.id vient de la session : le client ne peut pas le choisir.
+const facture = db.prepare("SELECT id, numero, montant, statut FROM factures WHERE id = ? AND client_id = ?")
+  .get(id, moi.id);
+if (!facture) return repondre(res, 404, { erreur: "Facture introuvable." });   // pas la sienne = introuvable
+
+db.prepare("UPDATE factures SET statut = ? WHERE id = ? AND client_id = ?").run(corps.statut, id, moi.id);
+db.prepare("DELETE FROM factures WHERE id = ? AND client_id = ?").run(id, moi.id);
+
+// 2. Le profil : une liste blanche des champs modifiables. Le rôle n'en fait pas partie.
+const nom = typeof corps.nom === "string" &amp;&amp; corps.nom.trim() ? corps.nom : moi.nom;
+const telephone = typeof corps.telephone === "string" ? corps.telephone : moi.telephone;
+db.prepare("UPDATE utilisateurs SET nom = ?, telephone = ? WHERE id = ?").run(nom, telephone, moi.id);
+
+// 3. L'administration : le rôle est vérifié par le serveur.
+if (moi.role !== "admin") return repondre(res, 403, { erreur: "Réservé à l'administration." });</code></pre>
+          <ul>
+            <li>
+              Pourquoi <strong>404</strong> pour la facture d'un autre, et pas 403 ? Un 403 dirait « elle existe, mais pas
+              pour toi ». Un 404 ne révèle même pas son existence.
+            </li>
+            <li>
+              Pourquoi <strong>403</strong> pour l'administration ? Tout le monde sait qu'elle existe. Ce qui compte, c'est
+              que le serveur la refuse, et pas seulement que le bouton soit caché dans la page.
+            </li>
+            <li>
+              Des numéros difficiles à deviner (des UUID) rendent l'attaque moins facile, mais ils ne
+              <strong>remplacent pas</strong> la vérification : un numéro finit toujours par circuler (un lien partagé,
+              une capture d'écran, un journal).
+            </li>
+          </ul>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 300" role="img" aria-labelledby="schema-35-titre schema-35-desc">
+              <title id="schema-35-titre">Le contrôle d'accès au niveau de la ressource</title>
+              <desc id="schema-35-desc">
+                Awa demande GET /api/factures/17. Première porte : qui es-tu ? La session répond Awa, sinon 401. Deuxième
+                porte : est-ce sa facture ? La requête contient AND client_id égal à l'id d'Awa, sinon 404. Troisième
+                étape : la réponse 200 avec la facture. Pour les routes d'administration, le rôle est aussi vérifié par
+                le serveur, sinon 403, et le rôle ne vient jamais du corps de la requête.
+              </desc>
+              <defs>
+                <marker id="fleche-35" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <text class="s-code" x="110" y="14" text-anchor="middle">Awa : GET /api/factures/17</text>
+              <line class="s-trait" x1="110" y1="20" x2="110" y2="30" marker-end="url(#fleche-35)" />
+
+              <rect class="s-cadre" x="0.75" y="34" width="220" height="48" />
+              <text class="s-ui" x="12" y="54">1. Qui es-tu ?</text>
+              <text class="s-note" x="12" y="72">la session → Awa (id 1)</text>
+              <text class="s-note s-note-laterite" x="236" y="62">sinon 401</text>
+
+              <line class="s-trait" x1="110" y1="82" x2="110" y2="96" marker-end="url(#fleche-35)" />
+
+              <rect class="s-boite-contenu" x="1" y="100" width="219" height="62" />
+              <text class="s-ui-laterite" x="12" y="120">2. Est-ce SA facture ?</text>
+              <text class="s-code" x="12" y="140">AND client_id = ?</text>
+              <text class="s-note" x="12" y="155">le ? vaut l'id de la session</text>
+              <text class="s-note s-note-laterite" x="236" y="128">sinon 404</text>
+              <text class="s-note" x="236" y="144">(rien n'est</text>
+              <text class="s-note" x="236" y="158">révélé)</text>
+
+              <line class="s-trait" x1="110" y1="162" x2="110" y2="176" marker-end="url(#fleche-35)" />
+
+              <rect class="s-cadre" x="0.75" y="180" width="220" height="40" />
+              <text class="s-ui" x="12" y="205">3. 200 + la facture</text>
+
+              <g class="s-filet"><line x1="0" y1="236" x2="320" y2="236" /></g>
+              <text class="s-ui" x="0" y="258">Routes d'administration :</text>
+              <text class="s-note" x="0" y="276">en plus, le serveur vérifie le rôle (403 sinon).</text>
+              <text class="s-note s-note-laterite" x="0" y="292">Le rôle ne vient jamais du corps de la requête.</text>
+            </svg>
+            <figcaption>
+              La porte n°2 est celle que l'IA oublie : être connecté ne dit rien sur ce qu'on a le droit de toucher. Elle
+              doit exister pour la lecture, la modification <strong>et</strong> la suppression.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Pour chaque route qui touche aux données d'un utilisateur :</p>
+          <ul class="liste-verif">
+            <li>Chaque <code>SELECT</code>, <code>UPDATE</code> ou <code>DELETE</code> sur une ressource précise contient la condition de propriété (<code>AND client_id = ?</code>), avec l'id tiré de la <strong>session</strong>.</li>
+            <li>Les listes, recherches, exports et téléchargements de fichiers aussi : <code>WHERE client_id = ?</code>.</li>
+            <li><code>PUT</code>, <code>PATCH</code> et <code>DELETE</code> vérifient la propriété comme <code>GET</code>. L'IA protège souvent la lecture… et oublie la modification.</li>
+            <li>Jamais de copie du corps entier (<code>...req.body</code>, <code>Object.assign</code>) dans un objet enregistré : une liste blanche des champs modifiables.</li>
+            <li>
+              <code>role</code>, <code>client_id</code>, <code>utilisateur_id</code>, un prix, un solde… ne viennent jamais
+              du corps ni de l'adresse. Et méfie-toi des « corrections » par liste noire (<code>delete corps.role</code>) :
+              le prochain champ sensible passera.
+            </li>
+            <li>Les routes d'administration vérifient le rôle <strong>côté serveur</strong> (403). Cacher le bouton dans la page ne protège rien.</li>
+            <li>La ressource d'un autre répond 404, pour ne pas révéler son existence.</li>
+            <li>La seule preuve, c'est le test avec <strong>deux comptes</strong> : ce que A a le droit de faire, B doit être incapable de le faire sur les données de A.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Authentification : qui es-tu ? Autorisation : as-tu le droit sur <em>cette</em> donnée ? Il faut les deux.</li>
+            <li>IDOR : changer un numéro dans l'adresse suffit, si la requête ne vérifie pas le propriétaire.</li>
+            <li>Chaque requête sur une ressource contient <code>AND client_id = ?</code>, avec l'id de la session. En lecture, en modification et en suppression.</li>
+            <li>Le rôle et le propriétaire viennent de la session et de la base, jamais du client : liste blanche des champs modifiables.</li>
+            <li>Teste toujours avec deux comptes : c'est la seule preuve d'isolation.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans <code>exercices/m3-05/</code>. Le serveur se lance avec <code>node serveur.js</code>
+            (dans <code>factures</code>, port <strong>3012</strong>). La base est en mémoire : chaque redémarrage repart
+            des données de départ. Comptes : <code>awa@exemple.ci</code> / <code>mangue-papaye-2026</code>,
+            <code>kofi@exemple.ci</code> / <code>kedjenou-du-dimanche</code>, <code>admin@comptaplus.ci</code> /
+            <code>compta-plus-admin-2026</code>. Outils : <code>node verifier.js</code> (dans <code>factures</code>, 10
+            tests avec deux comptes étanches) et <code>node audit-autorisations.js &lt;dossier&gt;</code> (dans
+            <code>outils</code>).
+          </p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Entrer chez Kofi avec le compte d'Awa</h3>
+            <ol>
+              <li>Lance le serveur. Dans un deuxième terminal, depuis <code>exercices/m3-05/requetes</code>, connecte Awa et regarde ses factures :</li>
+            </ol>
+            <pre><code>curl.exe -s -c cookies-awa.txt -X POST http://127.0.0.1:3012/api/connexion -H "Content-Type: application/json" --data "@connexion-awa.json"
+curl.exe -s -b cookies-awa.txt http://127.0.0.1:3012/api/factures</code></pre>
+            <ol start="2">
+              <li>Toujours en tant qu'Awa, demande la facture n°3, puis marque-la comme payée :</li>
+            </ol>
+            <pre><code>curl.exe -s -b cookies-awa.txt http://127.0.0.1:3012/api/factures/3
+curl.exe -si -b cookies-awa.txt -X PUT http://127.0.0.1:3012/api/factures/3 -H "Content-Type: application/json" --data "@statut-payee.json"</code></pre>
+            <ol start="3">
+              <li>Envoie un profil qui contient un rôle, puis ouvre l'administration :</li>
+            </ol>
+            <pre><code>curl.exe -s -b cookies-awa.txt -X PUT http://127.0.0.1:3012/api/moi -H "Content-Type: application/json" --data "@profil-avec-role.json"
+curl.exe -si -b cookies-awa.txt http://127.0.0.1:3012/api/admin/factures</code></pre>
+            <ol start="4">
+              <li>Redémarre le serveur, puis lance <code>node verifier.js</code> et <code>node audit-autorisations.js ../factures</code> (depuis <code>outils</code>).</li>
+              <li>Pour chaque ligne signalée par l'audit, réponds à une seule question : <strong>d'où vient l'id ?</strong> De l'adresse (le client le choisit) ou de la session ?</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> Awa voit, modifie, devient admin et ouvre l'administration. Le banc de test
+              donne 5 échecs sur 10, l'audit 7 points, et tu sais lesquels sont de vraies failles.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Dans la réponse de la facture n°3, regarde le champ <code>client_id</code> : est-ce celui d'Awa ?</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li>La facture n°3 s'affiche (<code>"client_id": 2</code>, 1 200 000 FCFA) : c'est celle de Kofi. Le <code>PUT</code> répond 200. Le profil revient avec <code>"role": "admin"</code>, et l'administration répond 200.</li>
+                <li>
+                  L'audit signale 5 requêtes « par id seul ». Trois sont de vraies failles : la lecture, la modification et
+                  la suppression d'une facture, où l'id vient de <strong>l'adresse</strong>. Deux sont sûres : la lecture
+                  et la mise à jour de l'utilisateur lui-même, où l'id vient de <strong>la session</strong>.
+                </li>
+                <li>Les deux autres points : <code>{ ...moi, ...corps }</code> (la copie du corps entier) et la route <code>/api/admin</code> sans vérification de rôle.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire corriger par Claude, et refuser les demi-mesures</h3>
+            <ol>
+              <li>Copie le dossier <code>factures</code> dans un dossier de travail. Dans la copie, demande à Claude :</li>
+            </ol>
+            <pre><code>Corrige les droits d'accès de serveur.js :
+- lire, modifier et supprimer une facture vérifient dans la requête
+  SQL qu'elle appartient au client connecté (AND client_id = ?, avec
+  l'id de la session) ; sinon 404 ;
+- PUT /api/moi n'accepte que nom et telephone (liste blanche) ;
+- GET /api/admin/factures répond 403 si le rôle n'est pas admin.</code></pre>
+            <ol start="2">
+              <li>Relance le serveur et <code>node verifier.js</code> : 10 sur 10 attendus.</li>
+              <li>Relance l'audit : il signale encore des lignes. Justifie chacune.</li>
+              <li>Relis le diff, en cherchant les demi-mesures.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 10 sur 10 au banc de test, chaque alerte restante justifiée, et un diff
+              sans demi-mesure.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Une alerte qui reste sur <code>WHERE id = ?</code> est acceptable si cet id est <code>moi.id</code>, c'est-à-dire qu'il vient de la session.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Le code attendu est celui de la section « Exemple concret ». Les demi-mesures à refuser :</p>
+              <ul>
+                <li><code>delete corps.role</code> avant de copier le corps : c'est une liste noire. Demain, <code>client_id</code> ou un autre champ passera.</li>
+                <li>La propriété vérifiée pour <code>GET</code>, mais pas pour <code>PUT</code> et <code>DELETE</code> : le banc de test le montre aussitôt.</li>
+                <li>Un 403 « cette facture ne t'appartient pas » : ça révèle qu'elle existe. Préfère 404.</li>
+                <li>Le lien vers l'administration caché dans la page, sans vérification côté serveur.</li>
+              </ul>
+              <p>
+                Vérifier la propriété en JavaScript (<code>if (facture.client_id !== moi.id)</code>) après la lecture est
+                acceptable, à condition de le faire <strong>partout</strong>. La mettre dans la requête SQL est plus sûr :
+                impossible de l'oublier dans une seule branche.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Le plan de test à deux comptes de ton projet</h3>
+            <p>
+              Dans un de tes projets (par exemple l'espace client de Royal Senteur), crée deux comptes de test, A et B.
+              Liste toutes les routes qui contiennent un identifiant (commande, adresse, facture, panier, avis…). Pour
+              chacune, essaie avec le compte B d'agir sur une donnée de A : lire, modifier, supprimer. Vérifie aussi ce que
+              le formulaire de profil accepte, et chaque route d'administration avec un compte non administrateur.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un tableau (route, action, résultat avec le compte B, verdict), lancé
+              aussi sur ton code avec <code>audit-autorisations.js</code>, et une demande de correction pour chaque faille.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Pense aux routes « secondaires » : télécharger une facture en PDF, l'historique des commandes, les adresses de livraison enregistrées.</li>
+                <li>Dans les outils du navigateur (onglet Réseau), regarde les requêtes envoyées par ta page : chaque nombre dans une adresse est un candidat.</li>
+                <li>Pour le profil, ajoute un champ inattendu (<code>role</code>, <code>id</code>) à la requête, et regarde s'il est enregistré.</li>
+                <li>Teste uniquement sur ton site et avec tes propres comptes de test.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Awa, connectée, remplace <code>/api/factures/14</code> par <code>/api/factures/15</code> et voit la facture d'un autre client. Quel est le problème ?</legend>
+            <label><input type="radio" name="q1" /> L'authentification : sa session est mal protégée.</label>
+            <label><input type="radio" name="q1" /> L'autorisation : le serveur ne vérifie pas que la facture lui appartient (IDOR).</label>
+            <label><input type="radio" name="q1" /> Les numéros de facture sont trop simples.</label>
+            <p class="explication" hidden>
+              Le serveur sait très bien qui est Awa. Il oublie seulement de vérifier que la facture demandée est la
+              sienne. Des numéros compliqués ralentiraient l'attaque, mais seule la vérification la rend impossible.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. Pour empêcher qu'un client se donne le rôle admin, l'IA ajoute <code>delete corps.role</code> avant de copier le corps. Suffisant ?</legend>
+            <label><input type="radio" name="q2" /> Oui, le rôle ne peut plus passer.</label>
+            <label><input type="radio" name="q2" /> Oui, à condition de le faire aussi dans la page.</label>
+            <label><input type="radio" name="q2" /> Non : c'est une liste noire. Le prochain champ sensible passera. Il faut une liste blanche des champs modifiables.</label>
+            <p class="explication" hidden>
+              Une liste noire doit penser à tout ce qui est dangereux, aujourd'hui et demain. Une liste blanche n'accepte
+              que ce qui est prévu : <code>nom</code> et <code>telephone</code>, rien d'autre.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. Awa demande la facture de Kofi. Pourquoi répondre 404 plutôt que 403 ?</legend>
+            <label><input type="radio" name="q3" /> Pour ne même pas lui révéler que cette facture existe.</label>
+            <label><input type="radio" name="q3" /> Parce que 403 est réservé aux problèmes de connexion.</label>
+            <label><input type="radio" name="q3" /> C'est pareil, le code n'a aucune importance.</label>
+            <p class="explication" hidden>
+              Un 403 dit « elle existe, mais pas pour toi » : on pourrait ainsi découvrir combien de factures existent. Un
+              404 ne donne aucune information. Pour une route d'administration, dont tout le monde connaît l'existence,
+              le 403 est approprié.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

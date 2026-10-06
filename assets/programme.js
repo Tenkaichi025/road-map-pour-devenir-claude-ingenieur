@@ -33,7 +33,7 @@ const PROGRAMME = [
       { id: "m3-02", titre: "Faille XSS : protéger l'affichage", pret: true },
       { id: "m3-03", titre: "Gérer les secrets et le .env", pret: true },
       { id: "m3-04", titre: "HTTPS et chiffrement en transit", pret: true },
-      { id: "m3-05", titre: "Authentification sécurisée et droits d'accès", pret: false },
+      { id: "m3-05", titre: "Contrôle d'accès et IDOR", pret: true },
     ],
   },
   {

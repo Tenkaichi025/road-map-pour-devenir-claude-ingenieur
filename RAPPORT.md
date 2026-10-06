@@ -95,4 +95,9 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   `client.js` avec NODE_TLS_REJECT_UNAUTHORIZED=0), `site/verifier.js` (7 tests : 1/7 fourni, 7/7 corrigé ; certificat
   vérifié avec l'option ca), `outils/audit-https.js`, `outils/relais-observateur.js` (montre HTTP en clair / HTTPS
   illisible, sur son propre trafic, écoute sur 127.0.0.1 seulement).
-- Ensuite : leçon 3.5 (droits d'accès).
+- Leçon 3.5 (contrôle d'accès et IDOR) rédigée. `exercices/m3-05/factures` (port 3012, base SQLite EN MÉMOIRE pour
+  repartir de zéro à chaque lancement : IDOR en lecture/modification/suppression, rôle admin via le corps, route admin
+  sans rôle), `factures/verifier.js` (10 tests à deux comptes étanches + admin : 5/10 fourni, 10/10 corrigé),
+  `outils/audit-autorisations.js` (2 fausses alertes restantes après correction : id venu de la session).
+  **Module 3 terminé.**
+- Ensuite : module 4 (Ingénieur Claude).

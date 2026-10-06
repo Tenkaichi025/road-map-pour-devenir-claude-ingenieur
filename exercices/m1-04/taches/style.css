@@ -1,0 +1,47 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f1ea;
+  color: #1f1f1f;
+}
+main {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.3rem;
+}
+.ligne {
+  display: flex;
+  gap: 0.5rem;
+}
+input {
+  flex: 1;
+  padding: 0.6rem;
+  font-size: 1rem;
+}
+button {
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  background: #1f1f1f;
+  color: white;
+  border: 0;
+  cursor: pointer;
+}
+.liste {
+  list-style: none;
+  padding: 0;
+  margin-top: 1.5rem;
+}
+.liste li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid #d8d2c4;
+  overflow-wrap: anywhere;
+}

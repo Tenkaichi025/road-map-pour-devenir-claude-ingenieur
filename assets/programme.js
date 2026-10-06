@@ -1,6 +1,6 @@
 // LE PROGRAMME : seul endroit qui définit l'ordre des modules et des leçons.
 // Pour ajouter une leçon :
-//   1. copie modele-lecon.html dans lecons/<id>.html (ex. lecons/m1-01.html)
+//   1. copie lecons/_modele.html dans lecons/<id>.html (ex. lecons/m1-01.html)
 //   2. ajoute une ligne ici, avec pret: true quand la page est rédigée.
 // L'id sert aussi de clé pour la progression : ne le change plus une fois publié.
 const PROGRAMME = [
@@ -8,11 +8,11 @@ const PROGRAMME = [
     titre: "Front-end",
     sousTitre: "Comprendre ce qui s'affiche",
     lecons: [
-      { id: "m1-01", titre: "Comment une page s'affiche", pret: false },
-      { id: "m1-02", titre: "HTML : la structure et le sens", pret: false },
-      { id: "m1-03", titre: "CSS et responsive", pret: false },
-      { id: "m1-04", titre: "JavaScript et le DOM", pret: false },
-      { id: "m1-05", titre: "Diagnostiquer avec les outils du navigateur", pret: false },
+      { id: "m1-01", titre: "Comment une page s'affiche", pret: true },
+      { id: "m1-02", titre: "HTML : la structure et le sens", pret: true },
+      { id: "m1-03", titre: "CSS et responsive", pret: true },
+      { id: "m1-04", titre: "JavaScript et le DOM", pret: true },
+      { id: "m1-05", titre: "Diagnostiquer avec les outils du navigateur", pret: true },
     ],
   },
   {

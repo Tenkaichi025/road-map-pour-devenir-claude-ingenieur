@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Météo</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="tableau">
+      <header class="entete">
+        <h1>Météo · <span id="ville"></span></h1>
+        <button id="unite" type="button">Afficher en °F</button>
+      </header>
+
+      <section class="maintenant">
+        <img id="icone" src="" alt="" width="96" height="96" />
+        <p id="temperature" class="temperature"></p>
+        <dl class="details">
+          <dt>Ressenti</dt>
+          <dd id="ressenti"></dd>
+          <dt>Humidité</dt>
+          <dd id="humidite"></dd>
+          <dt>Vent</dt>
+          <dd id="vent"></dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Les 5 prochains jours</h2>
+        <ol id="previsions" class="previsions"></ol>
+      </section>
+    </main>
+
+    <script src="donnees.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

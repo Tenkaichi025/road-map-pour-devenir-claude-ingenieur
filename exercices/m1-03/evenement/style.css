@@ -1,0 +1,69 @@
+/* Les couleurs et la police sont définies UNE fois ici, puis réutilisées partout avec var(--...). */
+:root {
+  --fond: #f7f4ee;
+  --texte: #1f1f1f;
+  --accent: #0b6e4f;
+  --police: Georgia, "Times New Roman", serif;
+}
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: var(--police);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+/* Téléphone d'abord : une seule colonne, de petites marges. */
+.entete,
+.contenu {
+  padding: 1.5rem 1rem;
+  max-width: 50rem;
+  margin: 0 auto;
+}
+
+.entete {
+  border-bottom: 4px solid var(--accent);
+}
+
+h1 {
+  font-size: 2.2rem;
+  line-height: 1.1;
+  margin: 0.3rem 0 0.8rem;
+}
+
+h2 {
+  color: var(--accent);
+}
+
+.date {
+  color: var(--accent);
+  font-weight: bold;
+  margin: 0;
+}
+
+.bouton {
+  display: inline-block;
+  background: var(--accent);
+  color: white;
+  padding: 0.8rem 1.4rem;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.programme {
+  padding-left: 1.2rem;
+}
+
+.programme strong {
+  display: inline-block;
+  min-width: 5rem;
+}
+
+/* Écran large : on agrandit le titre. */
+@media (min-width: 700px) {
+  h1 {
+    font-size: 3.5rem;
+  }
+}

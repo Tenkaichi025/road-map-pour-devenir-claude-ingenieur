@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HTML : la structure et le sens · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m1-02">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 1.2</p>
+          <h1>HTML : la structure et le sens</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Le HTML dit ce que chaque morceau de la page <strong>est</strong> : un titre, un paragraphe, un champ de
+            formulaire, un bouton. Ce n'est pas de la décoration. Le navigateur, les lecteurs d'écran (les logiciels
+            qui lisent la page à voix haute pour les personnes aveugles) et Google s'appuient sur ce sens.
+          </p>
+          <p>
+            Une page peut avoir l'air parfaite à l'écran et être mal construite. Un bloc <code>&lt;div&gt;</code>
+            déguisé en bouton <em>ressemble</em> à un bouton, mais il ne réagit pas au clavier. L'IA produit souvent
+            du HTML « qui a l'air bien ». Ton travail : vérifier qu'il dit la vérité.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Le formulaire de contact d'un traiteur qui reçoit des demandes pour des mariages et des baptêmes. Voici
+            une version bien construite :
+          </p>
+          <pre><code>&lt;form action="/contact" method="post"&gt;
+  &lt;label for="nom"&gt;Ton nom&lt;/label&gt;
+  &lt;input id="nom" name="nom" type="text" autocomplete="name" required&gt;
+
+  &lt;label for="email"&gt;Ton e-mail&lt;/label&gt;
+  &lt;input id="email" name="email" type="email" autocomplete="email" required&gt;
+
+  &lt;label for="date"&gt;Date de l'événement&lt;/label&gt;
+  &lt;input id="date" name="date" type="date"&gt;
+
+  &lt;label for="message"&gt;Ton message&lt;/label&gt;
+  &lt;textarea id="message" name="message" rows="5" required&gt;&lt;/textarea&gt;
+
+  &lt;button type="submit"&gt;Envoyer&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+          <h3>Pièce par pièce</h3>
+          <ul>
+            <li>
+              <code>&lt;label for="email"&gt;</code> est relié au champ qui a <code>id="email"</code>. Clique sur le
+              texte : le curseur va dans le champ. Un lecteur d'écran annonce « Ton e-mail ».
+            </li>
+            <li>
+              <code>name="email"</code> est le nom sous lequel la valeur est envoyée. <strong>Sans
+              <code>name</code>, le champ n'est jamais envoyé</strong>, même s'il est rempli.
+            </li>
+            <li>
+              <code>type="email"</code> et <code>type="date"</code> : sur téléphone, le bon clavier ou un calendrier
+              s'ouvre, et le navigateur vérifie le format.
+            </li>
+            <li><code>required</code> : le navigateur refuse l'envoi si le champ est vide.</li>
+            <li><code>&lt;button type="submit"&gt;</code> : un vrai bouton, utilisable à la souris, au doigt et au clavier.</li>
+          </ul>
+          <h3>La version « qui a l'air bien »</h3>
+          <p>Voici ce que l'IA produit parfois. À l'écran, presque aucune différence :</p>
+          <pre><code>&lt;div class="form"&gt;
+  &lt;input placeholder="E-mail"&gt;                          &lt;!-- pas de label, pas de name, pas de type --&gt;
+  &lt;div class="btn" onclick="envoyer()"&gt;Envoyer&lt;/div&gt;   &lt;!-- un div déguisé en bouton --&gt;
+&lt;/div&gt;</code></pre>
+          <p>
+            Le texte gris du <code>placeholder</code> disparaît dès qu'on commence à taper. On ne sait plus ce que le
+            champ demande. Le faux bouton ne peut pas être atteint avec la touche <kbd>Tab</kbd>. Et sans
+            <code>name</code>, rien ne serait envoyé par un formulaire classique.
+          </p>
+          <h3>La structure de la page</h3>
+          <p>Le même principe vaut pour toute la page : chaque zone a sa balise.</p>
+          <pre><code>&lt;header&gt; logo, menu &lt;/header&gt;
+&lt;main&gt;
+  &lt;h1&gt;Un seul titre principal&lt;/h1&gt;
+  &lt;h2&gt;Une section&lt;/h2&gt;   &lt;h3&gt;Une sous-partie&lt;/h3&gt;
+&lt;/main&gt;
+&lt;footer&gt; contact, mentions &lt;/footer&gt;</code></pre>
+        </section>
+
+        <section class="bloc" id="video-bloc">
+          <h2>Vidéo</h2>
+          <div class="video" data-youtube=""></div>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Pour chaque formulaire ou page que l'IA te livre :</p>
+          <ul class="liste-verif">
+            <li>Chaque champ a un <code>&lt;label&gt;</code> relié. Test : clique sur le texte du label, le curseur doit aller dans le champ.</li>
+            <li>Chaque champ a un <code>name</code>. Test : envoie le formulaire et vérifie que toutes les valeurs partent.</li>
+            <li>Le bon <code>type</code> : <code>email</code>, <code>tel</code>, <code>date</code>, <code>number</code>… Test : ouvre la page sur ton téléphone et regarde le clavier.</li>
+            <li>Les boutons sont des <code>&lt;button&gt;</code>, pas des <code>&lt;div&gt;</code> cliquables. Test : parcours la page avec <kbd>Tab</kbd>, puis valide avec <kbd>Entrée</kbd>.</li>
+            <li>Le <code>placeholder</code> ne remplace jamais le label.</li>
+            <li>Un seul <code>&lt;h1&gt;</code>, et des titres dans l'ordre (<code>h2</code> sous <code>h1</code>, <code>h3</code> sous <code>h2</code>).</li>
+            <li>Chaque image a un <code>alt</code> qui la décrit (ou <code>alt=""</code> si elle est purement décorative).</li>
+          </ul>
+          <p>
+            Attention : <code>required</code> et <code>type="email"</code> aident l'utilisateur, mais ils ne protègent
+            rien. N'importe qui peut les contourner. Le serveur doit toujours revérifier les données (module 3).
+          </p>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Le HTML décrit ce que chaque élément est, pas à quoi il ressemble.</li>
+            <li>Un champ sans <code>name</code> n'est pas envoyé. Un champ sans label est un champ muet.</li>
+            <li>Un bouton, c'est un <code>&lt;button&gt;</code>. Tout le reste casse au clavier.</li>
+            <li>Le bon <code>type</code> de champ donne le bon clavier et une première vérification gratuite.</li>
+            <li>Teste à la souris ET au clavier : <kbd>Tab</kbd>, <kbd>Entrée</kbd>.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>Les fichiers sont dans <code>exercices/m1-02/</code>. Tu as besoin d'un éditeur de code (VS Code par exemple) et d'un navigateur.</p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Trouver ce qui cloche dans un formulaire généré</h3>
+            <p>
+              Ce formulaire de réservation de restaurant a été généré par une IA. Il a l'air correct, mais il contient
+              <strong>au moins 6 problèmes</strong>.
+            </p>
+            <ol>
+              <li>
+                Ouvre <a href="../exercices/m1-02/formulaire-a-corriger.html">formulaire-a-corriger.html</a> dans le
+                navigateur, et ouvre aussi le même fichier dans ton éditeur.
+              </li>
+              <li>
+                Remplis tous les champs, puis clique sur « Réserver ». Regarde la barre d'adresse : les données
+                envoyées s'affichent après le <code>?</code> (par exemple <code>?nom=Awa&amp;email=...</code>). Est-ce
+                qu'il en manque une ?
+              </li>
+              <li>Recharge la page, clique dans la page puis appuie plusieurs fois sur <kbd>Tab</kbd>. Est-ce que tu peux atteindre le bouton ?</li>
+              <li>Reprends chaque point de la liste « Vérifier le travail de l'IA » ci-dessus, un par un, sur le code.</li>
+              <li>
+                Au-dessus de chaque ligne fautive, ajoute un commentaire dans le fichier, par exemple :
+                <code>&lt;!-- PROBLÈME : pas de label --&gt;</code>.
+              </li>
+            </ol>
+            <p class="attendu"><strong>Résultat attendu :</strong> au moins 6 commentaires « PROBLÈME », chacun avec sa raison.</p>
+            <details>
+              <summary>Indices</summary>
+              <p>
+                Cherche dans ces catégories : le titre de la page, l'image, les labels, les types de champs, un
+                <code>name</code> oublié, le bouton, les champs obligatoires.
+              </p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li>Pas de <code>&lt;h1&gt;</code> : le titre est un <code>&lt;div class="titre"&gt;</code>.</li>
+                <li>Le logo n'a pas d'<code>alt</code>.</li>
+                <li>Aucun champ n'a de <code>&lt;label&gt;</code> : seulement des placeholders.</li>
+                <li>Le champ e-mail est en <code>type="text"</code> au lieu de <code>type="email"</code>.</li>
+                <li>Le téléphone n'a pas de <code>name</code> : il n'apparaît jamais dans l'adresse après l'envoi.</li>
+                <li>« Nombre de personnes » devrait être <code>type="number"</code>, et la date <code>type="date"</code>.</li>
+                <li>Le bouton est un <code>&lt;div onclick&gt;</code> : impossible à atteindre au clavier.</li>
+                <li>Aucun champ n'est <code>required</code> : on peut réserver avec un formulaire vide.</li>
+              </ol>
+              <p>Version corrigée :</p>
+              <pre><code>&lt;img src="logo.svg" alt="Logo du restaurant Chez Tantie" width="80" height="80"&gt;
+&lt;h1&gt;Chez Tantie : réserver une table&lt;/h1&gt;
+
+&lt;form action="" method="get"&gt;
+  &lt;label for="nom"&gt;Ton nom&lt;/label&gt;
+  &lt;input id="nom" name="nom" autocomplete="name" required&gt;
+
+  &lt;label for="email"&gt;Ton e-mail&lt;/label&gt;
+  &lt;input id="email" name="email" type="email" autocomplete="email" required&gt;
+
+  &lt;label for="tel"&gt;Ton téléphone&lt;/label&gt;
+  &lt;input id="tel" name="tel" type="tel" autocomplete="tel" required&gt;
+
+  &lt;label for="personnes"&gt;Nombre de personnes&lt;/label&gt;
+  &lt;input id="personnes" name="personnes" type="number" min="1" max="20" required&gt;
+
+  &lt;label for="date"&gt;Date&lt;/label&gt;
+  &lt;input id="date" name="date" type="date" required&gt;
+
+  &lt;button type="submit"&gt;Réserver&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire générer un formulaire, puis le contrôler</h3>
+            <ol>
+              <li>Dans un dossier de travail, demande à Claude :</li>
+            </ol>
+            <pre><code>Crée un formulaire de contact HTML pour un salon de coiffure à
+Cocody : nom, téléphone, e-mail, prestation souhaitée (liste de
+choix), date souhaitée et message. Un seul fichier HTML, avec un
+CSS simple dans une balise &lt;style&gt;.</code></pre>
+            <ol start="2">
+              <li>Passe le résultat au crible de la liste « Vérifier le travail de l'IA ». Fais les tests réels : clic sur les labels, <kbd>Tab</kbd>, envoi d'un formulaire vide, e-mail <code>abc</code>.</li>
+              <li>
+                Pour chaque problème trouvé, écris une demande de correction <strong>précise</strong> et envoie-la à
+                Claude. Puis refais les tests.
+              </li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un formulaire qui passe les 7 contrôles, et une demande de correction
+              qui nomme chaque problème au lieu de dire « améliore le formulaire ».
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>
+                Les oublis fréquents de l'IA : le <code>&lt;select&gt;</code> de la prestation sans label, le téléphone
+                en <code>type="text"</code>, un <code>name</code> manquant, aucun <code>autocomplete</code>.
+              </p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Exemple de bonne demande de correction :</p>
+              <pre><code>Corrige uniquement ces points, sans rien changer d'autre :
+1. Le &lt;select&gt; de la prestation n'a pas de &lt;label&gt; relié (for/id).
+2. Le champ téléphone doit être type="tel" avec autocomplete="tel".
+3. Le champ message n'a pas d'attribut name.
+Ensuite, liste-moi les lignes modifiées.</code></pre>
+              <p>Le résultat attendu pour la liste de choix :</p>
+              <pre><code>&lt;label for="prestation"&gt;Prestation souhaitée&lt;/label&gt;
+&lt;select id="prestation" name="prestation" required&gt;
+  &lt;option value=""&gt;Choisis une prestation&lt;/option&gt;
+  &lt;option value="tresses"&gt;Tresses&lt;/option&gt;
+  &lt;option value="coupe"&gt;Coupe&lt;/option&gt;
+&lt;/select&gt;</code></pre>
+              <p>
+                Pourquoi « sans rien changer d'autre » ? Sinon, l'IA réécrit souvent tout le fichier, et tu dois tout
+                revérifier.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Auditer un formulaire de ton propre projet</h3>
+            <p>
+              Prends un vrai formulaire d'un de tes projets : contact, commande, inscription ou connexion. Passe-le au
+              crible de la liste de contrôle. Écris la liste des problèmes. Puis demande à Claude de corriger
+              <strong>seulement</strong> ces problèmes, et vérifie toi-même chaque correction.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> une liste de problèmes datée, les corrections appliquées, et les tests
+              au clavier qui passent.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Dans le navigateur, clic droit sur un champ puis <em>Inspecter</em> : tu vois le HTML réel, même si la page est générée par un framework.</li>
+                <li>Sur un formulaire de commande, vérifie surtout les <code>name</code> : un champ oublié, c'est une information de livraison perdue.</li>
+                <li>Teste sur ton téléphone : c'est là que les mauvais <code>type</code> se voient.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Un formulaire envoie bien le nom et le message, mais jamais le téléphone. Quelle est la cause la plus probable ?</legend>
+            <label><input type="radio" name="q1" /> Le <code>type="tel"</code> n'est pas reconnu par le navigateur.</label>
+            <label><input type="radio" name="q1" /> Le champ téléphone n'a pas d'attribut <code>name</code>.</label>
+            <label><input type="radio" name="q1" /> Le champ téléphone n'a pas de label.</label>
+            <p class="explication" hidden>
+              C'est le <code>name</code> qui donne un nom à la valeur envoyée. Sans lui, le navigateur ignore le champ
+              au moment de l'envoi. Le label, lui, ne change rien à l'envoi.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>2. Pourquoi un <code>&lt;div onclick="..."&gt;</code> utilisé comme bouton pose-t-il problème ?</legend>
+            <label><input type="radio" name="q2" /> On ne peut pas l'atteindre ni l'activer au clavier, et les lecteurs d'écran ne savent pas que c'est un bouton.</label>
+            <label><input type="radio" name="q2" /> Il est plus lent à afficher qu'un bouton.</label>
+            <label><input type="radio" name="q2" /> On ne peut pas lui donner de couleur.</label>
+            <p class="explication" hidden>
+              Un <code>&lt;button&gt;</code> est accessible au clavier et annoncé comme bouton, sans aucun effort. Un
+              <code>&lt;div&gt;</code> n'a rien de tout ça : il faudrait tout recoder à la main, et l'IA l'oublie
+              presque toujours.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>3. Le formulaire utilise <code>required</code> et <code>type="email"</code>. Est-ce suffisant pour être sûr que les données reçues sont valides ?</legend>
+            <label><input type="radio" name="q3" /> Oui, le navigateur bloque toutes les données invalides.</label>
+            <label><input type="radio" name="q3" /> Oui, si on ajoute aussi une vérification en JavaScript.</label>
+            <label><input type="radio" name="q3" /> Non : ce sont des aides pour l'utilisateur, faciles à contourner. Le serveur doit revérifier.</label>
+            <p class="explication" hidden>
+              Tout ce qui se passe dans le navigateur peut être modifié par la personne qui l'utilise : il suffit
+              d'ouvrir les outils de développement. La vraie vérification se fait côté serveur. On le verra au module 3.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

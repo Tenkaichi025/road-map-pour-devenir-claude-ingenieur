@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diagnostiquer avec les outils du navigateur · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m1-05">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 1.5</p>
+          <h1>Diagnostiquer avec les outils du navigateur</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Un bug, c'est un écart entre ce que tu <strong>attends</strong> et ce que tu <strong>vois</strong>. Le
+            navigateur te donne des indices précis pour le réduire. La <strong>Console</strong> affiche les erreurs
+            JavaScript, avec le fichier et la ligne. L'onglet <strong>Réseau</strong> montre les fichiers qui
+            manquent. L'onglet <strong>Éléments</strong> montre la page réelle.
+          </p>
+          <p>
+            Diagnostiquer, ce n'est pas deviner. C'est observer, localiser, vérifier, puis corriger. Et quand tu
+            passes le problème à l'IA, la qualité de ta description décide de la qualité de sa correction.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>Un tableau de bord météo affiche la température actuelle… et voici ce qu'on voit à l'écran :</p>
+          <pre><code>undefined °C</code></pre>
+          <p>
+            Aucune erreur dans la Console. Le mot <code>undefined</code> veut dire : « tu demandes une valeur qui
+            n'existe pas ». Voici la méthode en 4 étapes.
+          </p>
+          <ol>
+            <li><strong>Observer.</strong> Qu'est-ce qui s'affiche exactement, et où ? Ici : « undefined °C », dans le gros chiffre de la température.</li>
+            <li><strong>Localiser.</strong> Quelle ligne de code produit ce texte ? Cherche <code>°C</code> ou <code>#temperature</code> dans les fichiers (<kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>F</kbd> dans VS Code).</li>
+            <li>
+              <strong>Vérifier.</strong> Affiche les données réelles. Tape dans la Console :
+              <code>METEO.maintenant</code>, puis <kbd>Entrée</kbd>.
+            </li>
+            <li><strong>Corriger, puis revérifier.</strong> Recharge la page, regarde la Console, et contrôle le reste de la page.</li>
+          </ol>
+          <pre><code>// donnees.js
+const METEO = { maintenant: { temp: 29, humidite: 78 } };
+
+// app.js
+formater(m.temperature)    // la clé s'appelle « temp », pas « temperature »</code></pre>
+          <p>La Console a répondu <code>{temp: 29, humidite: 78}</code>. Le code demande <code>temperature</code>. Cause trouvée.</p>
+
+          <h3>Lire un message d'erreur</h3>
+          <pre><code>Uncaught TypeError: Cannot read properties of undefined (reading 'map')    app.js:31</code></pre>
+          <ul>
+            <li><code>TypeError</code> : le type de problème (ici, une opération sur une valeur qui ne s'y prête pas).</li>
+            <li><code>Cannot read properties of undefined (reading 'map')</code> : le code a écrit <code>quelque_chose.map</code>, mais <code>quelque_chose</code> vaut <code>undefined</code>.</li>
+            <li><code>app.js:31</code> : le fichier et la ligne. C'est un lien : clique dessus.</li>
+          </ul>
+          <h3>Les messages que tu verras le plus</h3>
+          <ul>
+            <li><code>X is not defined</code> : un nom mal écrit, une variable jamais créée, ou un script qui n'a pas été chargé.</li>
+            <li><code>Cannot read properties of null</code> : <code>querySelector</code> n'a rien trouvé. Le sélecteur est faux, ou le script s'exécute trop tôt.</li>
+            <li><code>Cannot read properties of undefined</code> : les données n'ont pas la forme que le code attend.</li>
+            <li><code>404</code> ou <code>ERR_FILE_NOT_FOUND</code> dans Réseau : un mauvais chemin de fichier.</li>
+          </ul>
+
+          <h3>Le rapport de bug pour l'IA</h3>
+          <p>« Ça marche pas, corrige » oblige l'IA à deviner. Donne-lui plutôt ceci :</p>
+          <pre><code>Ce que je fais : j'ouvre index.html dans Chrome.
+Ce que j'attends : la température actuelle, « 29 °C ».
+Ce que je vois : « undefined °C ». Aucune erreur dans la Console.
+Fichiers concernés : app.js (affichage), donnees.js (données).
+Ce que j'ai vérifié : METEO.maintenant vaut { temp: 29, humidite: 78, ... }.
+Demande : explique la cause avant de corriger, puis corrige seulement ce bug.</code></pre>
+        </section>
+
+        <section class="bloc" id="video-bloc">
+          <h2>Vidéo</h2>
+          <div class="video" data-youtube=""></div>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>L'IA te dit « c'est corrigé ». Avant de la croire :</p>
+          <ul class="liste-verif">
+            <li>Elle a expliqué la <strong>cause</strong>, pas seulement modifié du code.</li>
+            <li>Le symptôme exact a disparu : refais exactement les mêmes étapes qu'avant.</li>
+            <li>La Console est vide, et l'onglet Réseau n'a aucune ligne rouge.</li>
+            <li>Le reste de la page marche toujours : une correction peut casser autre chose à côté.</li>
+            <li>
+              Elle n'a pas <strong>caché</strong> l'erreur au lieu de la corriger : un <code>try/catch</code> vide, un
+              <code>|| 0</code> ajouté pour faire disparaître <code>undefined</code>, des <code>?.</code> partout.
+            </li>
+            <li>Si une correction fait apparaître un nouveau problème, recommence la méthode : un bug peut en cacher un autre.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Un bug = un écart entre ce qu'on attend et ce qu'on voit. Décris les deux précisément.</li>
+            <li>Console pour les erreurs JavaScript (avec fichier et ligne), Réseau pour les fichiers, Éléments pour la page réelle.</li>
+            <li><code>undefined</code> = tu demandes une valeur qui n'existe pas. Vérifie le nom et la forme des données.</li>
+            <li>Un bon rapport à l'IA : ce que je fais, ce que j'attends, ce que je vois, le message exact, les fichiers.</li>
+            <li>Corriger, ce n'est pas cacher l'erreur. Exige la cause.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>Les fichiers sont dans <code>exercices/m1-05/</code>.</p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Lire une erreur jusqu'à la ligne fautive</h3>
+            <ol>
+              <li>Ouvre <a href="../exercices/m1-05/compteur/index.html">la recette du garba</a>. Clique sur « J'aime ». Le compteur ne bouge pas.</li>
+              <li><kbd>F12</kbd>, onglet <strong>Console</strong>. Clique encore sur « J'aime » : une erreur rouge apparaît.</li>
+              <li>Lis le message mot à mot. Quelle opération a échoué ? Sur quelle valeur ?</li>
+              <li>Clique sur le lien <code>app.js:6</code> à droite du message. L'onglet <strong>Sources</strong> s'ouvre sur la ligne fautive.</li>
+              <li>Compare le sélecteur utilisé dans le code avec les <code>id</code> du HTML (onglet Éléments).</li>
+              <li>Corrige <code>app.js</code> dans ton éditeur, recharge, teste.</li>
+            </ol>
+            <p class="attendu"><strong>Résultat attendu :</strong> le compteur augmente à chaque clic, et la Console reste vide.</p>
+            <details>
+              <summary>Indices</summary>
+              <p>Le message est <code>Cannot set properties of null (setting 'textContent')</code>. Quelque chose vaut <code>null</code> : c'est le résultat d'un <code>querySelector</code> qui n'a rien trouvé.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>
+                Ligne 6, le code cherche <code>#compteur</code>, mais dans le HTML le nombre est dans
+                <code>&lt;span id="nb-likes"&gt;</code>. <code>querySelector</code> renvoie <code>null</code>, et on ne
+                peut pas modifier le texte de « rien ». Correction :
+              </p>
+              <pre><code>document.querySelector("#nb-likes").textContent = likes;</code></pre>
+              <p>
+                Remarque : l'erreur n'apparaît qu'au clic, pas au chargement. Certains bugs ne se montrent que quand
+                tu fais l'action. C'est pour ça qu'il faut tester chaque bouton.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Le « undefined » de la météo, avec Claude</h3>
+            <ol>
+              <li>Ouvre <a href="../exercices/m1-05/meteo/index.html">le tableau de bord météo</a>. Tu vois « undefined °C ».</li>
+              <li>
+                Tu verras aussi une erreur rouge dans la Console. Elle concerne un <strong>autre</strong> bug : garde-la
+                pour l'exercice 3. Ici, on ne s'occupe que de la température.
+              </li>
+              <li>Applique les étapes « observer » et « localiser » sans IA. Tape <code>METEO.maintenant</code> dans la Console.</li>
+              <li>Copie le dossier <code>meteo</code> dans un dossier de travail. Rédige un rapport de bug avec les 6 parties du modèle, puis donne-le à Claude dans cette copie.</li>
+              <li>Vérifie sa réponse avec la liste « Vérifier le travail de l'IA ».</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> « 29 °C » s'affiche. Claude a expliqué la cause avant de corriger,
+              et il n'a modifié qu'une seule ligne.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Le ressenti affiche bien « 33 °C ». Compare les deux lignes qui affichent la température et le ressenti dans <code>app.js</code>.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>
+                Cause : <code>app.js</code>, ligne 23, lit <code>m.temperature</code>, alors que la donnée s'appelle
+                <code>temp</code> dans <code>donnees.js</code>. Correction en une ligne :
+              </p>
+              <pre><code>document.querySelector("#temperature").textContent = formater(m.temp);</code></pre>
+              <p>Corrections à refuser, même si « undefined » disparaît :</p>
+              <ul>
+                <li><code>formater(m.temperature || 0)</code> : affiche « 0 °C ». C'est faux, et c'est pire : plus personne ne verra le bug.</li>
+                <li>Renommer <code>temp</code> en <code>temperature</code> dans les données : ça marche ici, mais dans une vraie appli, les données viennent d'une API que tu ne contrôles pas.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Les 3 bugs cachés de la météo</h3>
+            <p>
+              Après l'exercice 2, le tableau de bord a encore <strong>3 problèmes</strong>. Trouve-les tous. Pour
+              chacun, note le symptôme, la cause et l'endroit (fichier:ligne). Corrige-les seul ou avec Claude, mais
+              avec un rapport de bug pour chacun.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> les 5 jours de prévisions s'affichent avec leurs icônes. Le bouton
+              °F affiche <strong>84,2 °F</strong> pour 29 °C. La Console est vide et l'onglet Réseau n'a aucune ligne
+              rouge.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Un bug se voit dans la Console, un autre dans l'onglet Réseau.</li>
+                <li>Le troisième ne se voit dans <strong>aucun</strong> outil : seulement en comparant le résultat à une valeur connue. 0 °C = 32 °F, et 100 °C = 212 °F.</li>
+                <li>Un bug peut en cacher un autre : tant qu'il y a une erreur dans la Console, une partie du code ne s'exécute jamais.</li>
+              </ul>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li>
+                  <strong>Console</strong> : <code>Cannot read properties of undefined (reading 'map')</code>, app.js
+                  ligne 31. Le code lit <code>METEO.prevision</code>, alors que les données s'appellent
+                  <code>previsions</code>. Conséquence cachée : le script s'arrête là, donc le bouton °F n'est jamais
+                  branché et ne réagit pas. Correction : <code>METEO.previsions.map(...)</code>.
+                </li>
+                <li>
+                  <strong>Réseau</strong> : les icônes sont en rouge (<code>img/nuageux.svg</code> introuvable). Ligne 16,
+                  le chemin est <code>img/</code>, alors que le dossier s'appelle <code>icones/</code>. Correction :
+                  <code>"icones/" + nom + ".svg"</code>.
+                </li>
+                <li>
+                  <strong>Aucun outil</strong> : une fois le bouton branché, 29 °C donne 75,2 °F au lieu de 84,2 °F.
+                  Ligne 4, la formule ajoute 23 au lieu de 32. Correction : <code>(celsius * 9) / 5 + 32</code>.
+                </li>
+              </ol>
+              <p>
+                Le bug 3 est le plus dangereux, et c'est celui que l'IA produit le plus souvent : un code qui tourne
+                sans erreur, mais qui calcule faux. Seule une valeur de contrôle connue le révèle. On reparlera de ces
+                vérifications à la leçon 4.5, sur les tests.
+              </p>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. La Console affiche : <code>Cannot read properties of null (reading 'addEventListener')</code>. Quelle est la cause la plus probable ?</legend>
+            <label><input type="radio" name="q1" /> Le navigateur ne connaît pas <code>addEventListener</code>.</label>
+            <label><input type="radio" name="q1" /> <code>querySelector</code> n'a trouvé aucun élément : le sélecteur est faux, ou le script s'exécute trop tôt.</label>
+            <label><input type="radio" name="q1" /> La connexion internet est coupée.</label>
+            <p class="explication" hidden>
+              <code>null</code> est ce que <code>querySelector</code> renvoie quand il ne trouve rien. Vérifie
+              l'orthographe du sélecteur, puis la présence de <code>defer</code> sur le script.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. L'IA « corrige » un <code>undefined °C</code> en écrivant <code>formater(m.temperature || 0)</code>. Est-ce une bonne correction ?</legend>
+            <label><input type="radio" name="q2" /> Oui, l'erreur a disparu.</label>
+            <label><input type="radio" name="q2" /> Oui, à condition de la tester.</label>
+            <label><input type="radio" name="q2" /> Non : elle cache le symptôme et affiche « 0 °C », une valeur fausse. La cause reste là.</label>
+            <p class="explication" hidden>
+              Faire disparaître un message n'est pas corriger. Ici, la page affiche maintenant une information fausse,
+              et le vrai problème (un mauvais nom de donnée) est toujours présent.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. Que doit contenir en priorité un rapport de bug pour l'IA ?</legend>
+            <label><input type="radio" name="q3" /> Ce que tu fais, ce que tu attends, ce que tu vois, et le message d'erreur exact.</label>
+            <label><input type="radio" name="q3" /> Le mot « urgent », pour qu'elle s'applique.</label>
+            <label><input type="radio" name="q3" /> Le code complet de tout le projet.</label>
+            <p class="explication" hidden>
+              L'écart entre l'attendu et l'observé, plus le message exact, permettent de localiser le problème. Tout
+              le projet noierait l'information. Mieux vaut indiquer les fichiers concernés.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

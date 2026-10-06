@@ -15,7 +15,9 @@ la main. Le site sera public sur GitHub Pages.
 - `assets/app.js` : toute la logique (route, progression, quiz, vidéo, case « terminé », navigation).
 - `assets/style.css` : design. `assets/fonts/` : polices auto-hébergées (Archivo, Source Serif 4, JetBrains Mono).
 - `lecons/<id>.html` : une page par leçon, copiée depuis `lecons/_modele.html`.
-- `exercices/<id>/` : fichiers de départ des exercices.
+- `exercices/<id>/` : fichiers de départ des exercices. **Beaucoup contiennent des bugs VOLONTAIRES** (décrits dans
+  les corrections des leçons, avec numéros de ligne) : ne jamais les corriger, et revérifier les numéros de ligne cités
+  si un fichier d'exercice est modifié.
 - `video/` : outillage Remotion + ElevenLabs (pas servi par le site).
 - `.nojekyll` : obligatoire, sinon GitHub Pages ignore les fichiers commençant par `_`.
 

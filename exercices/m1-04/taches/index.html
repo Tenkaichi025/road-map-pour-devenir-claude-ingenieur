@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mes tâches</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>Mes tâches</h1>
+      <form id="form-tache">
+        <label for="nouvelle">Nouvelle tâche</label>
+        <div class="ligne">
+          <input id="nouvelle" name="nouvelle" required autocomplete="off" />
+          <button type="submit">Ajouter</button>
+        </div>
+      </form>
+      <ul id="liste" class="liste"></ul>
+    </main>
+  </body>
+</html>

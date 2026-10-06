@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CSS et responsive · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m1-03">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 1.3</p>
+          <h1>CSS et responsive</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Le CSS est une liste de règles : « ces éléments-là, avec ce style-là ». Chaque élément de la page est une
+            <strong>boîte</strong> : le contenu, une marge intérieure (<code>padding</code>), une bordure
+            (<code>border</code>) et une marge extérieure (<code>margin</code>). Pour placer ces boîtes, on utilise
+            surtout <strong>Flexbox</strong> (aligner sur une ligne ou une colonne) et <strong>Grid</strong> (une
+            grille).
+          </p>
+          <p>
+            <strong>Responsive</strong> veut dire : la même page s'adapte à toutes les largeurs d'écran. On écrit
+            d'abord pour le téléphone, puis on ajoute des règles pour les écrans plus larges. Point important : l'IA
+            ne voit jamais ta page sur un téléphone. C'est toi qui dois le vérifier.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            La page d'un événement : une soirée de développeurs au Plateau, avec une liste d'intervenants. Sur
+            téléphone, une colonne. Sur ordinateur, trois.
+          </p>
+          <pre><code>/* 1. Les couleurs sont définies une seule fois, dans des variables. */
+:root {
+  --accent: #0b6e4f;
+  --texte: #1f1f1f;
+}
+
+h2 {
+  color: var(--accent);        /* on réutilise la variable */
+}
+
+/* 2. Téléphone d'abord : une seule colonne. */
+.intervenants {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+/* 3. À partir de 700 px de large, trois colonnes. */
+@media (min-width: 700px) {
+  .intervenants {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 4. Une image ne dépasse jamais de sa boîte. */
+img {
+  max-width: 100%;
+  height: auto;
+}</code></pre>
+          <p>Et dans le HTML, une ligne indispensable :</p>
+          <pre><code>&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;</code></pre>
+          <p>
+            Sans cette ligne, le téléphone fait semblant d'avoir un écran de 980 px de large. Il affiche alors la
+            version ordinateur en tout petit. Avec elle, il utilise sa vraie largeur et les règles
+            <code>@media</code> fonctionnent.
+          </p>
+          <h3>Quand deux règles se contredisent</h3>
+          <p>
+            C'est la <strong>cascade</strong>. La règle la plus précise gagne : un <code>#id</code> bat une
+            <code>.classe</code>, qui bat une simple balise. À précision égale, c'est la dernière écrite qui gagne.
+            Dans les outils du navigateur (panneau <strong>Styles</strong>), une règle battue apparaît
+            <s>barrée</s>.
+          </p>
+        </section>
+
+        <section class="bloc" id="video-bloc">
+          <h2>Vidéo</h2>
+          <div class="video" data-youtube=""></div>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Avant d'accepter du CSS généré :</p>
+          <ul class="liste-verif">
+            <li>La balise <code>&lt;meta name="viewport"&gt;</code> est dans le <code>&lt;head&gt;</code>.</li>
+            <li>
+              Teste dans le <strong>mode appareil</strong> (<kbd>F12</kbd>, puis <kbd>Ctrl</kbd> +
+              <kbd>Maj</kbd> + <kbd>M</kbd>) à 375 px de large : aucune barre de défilement horizontale.
+            </li>
+            <li>Pas de largeur fixe sur les grands blocs (<code>width: 1200px</code>). Préfère <code>max-width</code>.</li>
+            <li>Les images ont <code>max-width: 100%</code>.</li>
+            <li>Le texte est lisible sans zoomer (environ 16 px minimum). Les boutons sont assez grands pour un doigt (environ 44 px de haut).</li>
+            <li>Les couleurs répétées sont dans des variables (<code>--accent</code>), pas copiées 30 fois.</li>
+            <li>
+              Peu ou pas de <code>!important</code>. Quand l'IA en met partout, c'est souvent qu'elle force un style au
+              lieu de comprendre pourquoi il ne s'applique pas.
+            </li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Une règle CSS = un sélecteur + des propriétés.</li>
+            <li>Tout est une boîte : contenu, padding, bordure, margin.</li>
+            <li>Flexbox pour aligner sur une ligne ou une colonne, Grid pour une grille.</li>
+            <li>Responsive : on commence par le téléphone, puis on élargit avec <code>@media</code>.</li>
+            <li>Vérifie toujours à 375 px. C'est là que l'IA se trompe le plus.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>Les fichiers sont dans <code>exercices/m1-03/</code>.</p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Changer tout le thème en deux lignes</h3>
+            <ol>
+              <li>Ouvre <a href="../exercices/m1-03/evenement/index.html">exercices/m1-03/evenement/index.html</a> dans le navigateur.</li>
+              <li>
+                Appuie sur <kbd>F12</kbd>, onglet <strong>Éléments</strong> (<em>Elements</em>). Clique sur la balise
+                <code>&lt;h1&gt;</code> dans l'arbre. À droite, le panneau <strong>Styles</strong> montre toutes les
+                règles qui s'appliquent au titre.
+              </li>
+              <li>
+                Dans ce panneau, décoche la case devant <code>font-size</code> : le titre change. Recoche-la. Rien
+                n'est enregistré, tu ne fais que tester.
+              </li>
+              <li>
+                Clique sur <code>&lt;html&gt;</code> dans l'arbre. Dans la règle <code>:root</code>, clique sur la
+                valeur de <code>--accent</code> et remplace-la par <code>#c8462b</code>. Observe toute la page.
+              </li>
+              <li>
+                Maintenant, fais le changement pour de vrai : dans <code>style.css</code>, change
+                <code>--accent</code> et <code>--fond</code>, enregistre, recharge.
+              </li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> en modifiant 2 lignes, tu changes la couleur du bandeau, des titres,
+              de la date et du bouton.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Tu ne trouves pas <code>:root</code> ? Fais défiler le panneau Styles quand <code>&lt;html&gt;</code> est sélectionné.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>
+                Toutes les règles utilisent <code>var(--accent)</code> au lieu d'écrire la couleur. Changer la
+                variable change donc tous les endroits d'un coup. C'est ce que tu dois exiger de l'IA : des variables
+                pour les couleurs et les polices, pas des codes couleur copiés partout.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire ajouter une grille, la tester à 3 largeurs</h3>
+            <ol>
+              <li>Copie le dossier <code>evenement</code> dans un dossier de travail. Ouvre Claude Code dans cette copie et demande :</li>
+            </ol>
+            <pre><code>Dans index.html, ajoute une section « Intervenants » avant
+« Infos pratiques », avec 6 intervenants (nom, sujet, et une
+photo en carré de couleur à la place d'une vraie image).
+Une colonne sur téléphone, deux à partir de 600 px, trois à
+partir de 900 px. Utilise CSS Grid et les variables déjà
+présentes dans style.css. Ne modifie rien d'autre.</code></pre>
+            <ol start="2">
+              <li>Ouvre le mode appareil (<kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>M</kbd>) et teste à 375 px, 768 px et 1280 px.</li>
+              <li>Passe la liste « Vérifier le travail de l'IA » sur le CSS ajouté.</li>
+              <li>Si un point ne passe pas, demande une correction précise.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 1, 2 puis 3 colonnes selon la largeur, aucun défilement horizontal,
+              et aucune nouvelle couleur écrite en dur dans le CSS.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>
+                Dans <code>style.css</code>, cherche <code>#</code> suivi de 3 ou 6 caractères : si l'IA a ajouté des
+                codes couleur au lieu d'utiliser <code>var(--accent)</code>, c'est un point à corriger.
+              </p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Le CSS attendu ressemble à ceci :</p>
+              <pre><code>.intervenants {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 600px) {
+  .intervenants { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 900px) {
+  .intervenants { grid-template-columns: repeat(3, 1fr); }
+}
+.intervenant .photo {
+  aspect-ratio: 1;
+  background: var(--accent);
+}</code></pre>
+              <p>
+                Signaux d'alerte : des largeurs en px sur les cartes (<code>width: 300px</code>), une media query qui
+                part de l'ordinateur (<code>max-width</code> partout), de nouveaux codes couleur, ou des modifications
+                dans des parties que tu n'avais pas demandées.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>La page qui déborde sur téléphone</h3>
+            <p>
+              <a href="../exercices/m1-03/deborde/index.html">exercices/m1-03/deborde/</a> s'affiche bien sur
+              ordinateur. Mais à 375 px, on peut faire défiler la page de gauche à droite. Il y a <strong>3
+              causes</strong>. Trouve-les avec les outils, puis corrige le CSS.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> à 375 px, aucun défilement horizontal. La page reste correcte sur
+              ordinateur.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Dans l'onglet Éléments, survole chaque bloc : le navigateur affiche sa largeur réelle.</li>
+                <li>Astuce de pro : ajoute temporairement <code>* { outline: 1px solid red; }</code> dans le CSS. Toutes les boîtes apparaissent, et celle qui dépasse se voit tout de suite.</li>
+                <li>Lis les commentaires dans le CSS : parfois l'IA explique très bien pourquoi elle a fait une erreur.</li>
+              </ul>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li><code>.conteneur { width: 960px; }</code> : la boîte fait 960 px, même sur un écran de 375 px. Remplacer par <code>max-width: 960px;</code>.</li>
+                <li>L'image de la bannière fait 1200 px de large et rien ne la limite. Ajouter <code>img { max-width: 100%; height: auto; }</code>.</li>
+                <li><code>h1 { white-space: nowrap; }</code> interdit au titre de passer à la ligne. Sur un petit écran, il dépasse. Supprimer cette ligne : un titre qui passe sur deux lignes, c'est normal sur téléphone.</li>
+              </ol>
+              <p>Corrige une cause à la fois et reteste : c'est comme ça que tu sais laquelle faisait quoi.</p>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="3">
+            <legend>1. Sur téléphone, la page s'affiche en tout petit, comme une version d'ordinateur rétrécie. Qu'est-ce qui manque probablement ?</legend>
+            <label><input type="radio" name="q1" /> Une règle <code>@media</code>.</label>
+            <label><input type="radio" name="q1" /> Un <code>display: flex</code> sur le body.</label>
+            <label><input type="radio" name="q1" /> La balise <code>&lt;meta name="viewport"&gt;</code>.</label>
+            <p class="explication" hidden>
+              Sans la balise viewport, le téléphone simule un écran d'environ 980 px et rétrécit tout. Les règles
+              <code>@media</code> ne servent à rien tant que cette balise manque.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="2">
+            <legend>2. Dans le panneau Styles, une règle apparaît barrée. Qu'est-ce que ça veut dire, le plus souvent ?</legend>
+            <label><input type="radio" name="q2" /> Le fichier CSS n'a pas été chargé.</label>
+            <label><input type="radio" name="q2" /> Une autre règle, plus précise ou écrite plus loin, l'emporte.</label>
+            <label><input type="radio" name="q2" /> La règle sera appliquée plus tard.</label>
+            <p class="explication" hidden>
+              C'est la cascade : la règle barrée a perdu face à une autre. Si un petit triangle jaune apparaît à côté,
+              c'est différent : la propriété est mal écrite et le navigateur l'ignore.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. L'IA a mis <code>width: 1100px</code> sur le conteneur principal. Quel est le problème ?</legend>
+            <label><input type="radio" name="q3" /> Sur un écran plus étroit que 1100 px, la page déborde. Il faut utiliser <code>max-width</code>.</label>
+            <label><input type="radio" name="q3" /> Aucun, c'est une largeur standard.</label>
+            <label><input type="radio" name="q3" /> La page se chargera plus lentement.</label>
+            <p class="explication" hidden>
+              <code>width</code> impose une largeur exacte. <code>max-width</code> fixe une limite : la boîte peut
+              rétrécir sur un petit écran, mais ne dépassera jamais 1100 px sur un grand.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

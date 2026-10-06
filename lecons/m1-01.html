@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comment une page s'affiche · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m1-01">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 1.1</p>
+          <h1>Comment une page s'affiche</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Quand tu ouvres une page, ton navigateur fait trois choses : il <strong>demande</strong> des fichiers, il
+            les <strong>lit</strong>, puis il <strong>dessine</strong>. Le fichier HTML arrive toujours en premier.
+            En le lisant, le navigateur découvre qu'il a besoin d'autres fichiers : une feuille de style CSS, un script
+            JavaScript, des images. Il va les chercher un par un.
+          </p>
+          <p>
+            Chaque langage a son rôle. Le <strong>HTML</strong> dit ce qu'il y a sur la page. Le <strong>CSS</strong>
+            dit à quoi ça ressemble. Le <strong>JavaScript</strong> dit comment ça réagit.
+          </p>
+          <p>
+            Pourquoi c'est utile avec l'IA ? Quand elle te livre une page qui « ne marche pas », tu sauras poser les
+            bonnes questions : est-ce que le fichier est arrivé ? Est-ce qu'il a été lu ? Est-ce qu'il a planté ?
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Une petite galerie photo d'Abidjan. Voici son fichier <code>index.html</code>. Regarde bien : les photos
+            ne sont pas dedans. C'est le JavaScript qui les ajoutera.
+          </p>
+          <pre><code>&lt;!doctype html&gt;
+&lt;html lang="fr"&gt;
+  &lt;head&gt;
+    &lt;meta charset="utf-8"&gt;
+    &lt;title&gt;Galerie d'Abidjan&lt;/title&gt;
+    &lt;link rel="stylesheet" href="style.css"&gt;      &lt;!-- 2. le CSS est demandé --&gt;
+    &lt;script src="galerie.js" defer&gt;&lt;/script&gt;      &lt;!-- 3. le JS est demandé --&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1&gt;Galerie d'Abidjan&lt;/h1&gt;
+    &lt;div id="photos"&gt;&lt;/div&gt;                         &lt;!-- vide : le JS le remplira --&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+          <h3>Ce qui se passe, dans l'ordre</h3>
+          <ol>
+            <li>Le navigateur demande <code>index.html</code> et le reçoit.</li>
+            <li>
+              Il le lit de haut en bas et construit le <strong>DOM</strong> : la liste organisée de tous les éléments
+              de la page, rangés comme un arbre (tu le verras en détail à la leçon 1.4).
+            </li>
+            <li>
+              Il tombe sur <code>&lt;link&gt;</code> : il demande <code>style.css</code>. Tant que le CSS n'est pas
+              arrivé, il n'affiche rien. Sinon tu verrais la page clignoter sans style.
+            </li>
+            <li>
+              Il tombe sur <code>&lt;script defer&gt;</code> : il demande <code>galerie.js</code>. Le mot
+              <code>defer</code> lui dit : « télécharge-le maintenant, mais exécute-le seulement quand tout le HTML
+              aura été lu ».
+            </li>
+            <li>Il applique le CSS aux éléments et dessine la page.</li>
+            <li>
+              Le JavaScript s'exécute et ajoute trois balises <code>&lt;img&gt;</code>. Le navigateur découvre alors
+              les images, les demande, puis redessine la page.
+            </li>
+          </ol>
+          <p>
+            Ici, la page est ouverte depuis ton disque : son adresse commence par <code>file://</code> et les fichiers
+            viennent de ton ordinateur. Sur un vrai site, l'adresse commence par <code>https://</code> et les fichiers
+            viennent d'un serveur. Le principe reste le même. Le module 2 te montre le côté serveur.
+          </p>
+        </section>
+
+        <section class="bloc" id="video-bloc">
+          <h2>Vidéo</h2>
+          <div class="video" data-youtube=""></div>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>L'IA vient de te livrer une page. Avant de dire « c'est bon » :</p>
+          <ul class="liste-verif">
+            <li>
+              Ouvre-la toi-même dans un vrai navigateur. Ne crois pas « ça marche » sur parole : l'IA ne voit pas ton
+              écran.
+            </li>
+            <li>
+              Ouvre l'onglet <strong>Réseau</strong> (touche F12, puis recharge la page). Chaque fichier cité dans le
+              HTML doit apparaître, et aucun ne doit être en rouge (erreur 404 ou <code>ERR_FILE_NOT_FOUND</code>).
+            </li>
+            <li>Ouvre l'onglet <strong>Console</strong> : aucune erreur rouge au chargement.</li>
+            <li>
+              Les chemins correspondent aux vrais noms de fichiers, <strong>majuscules comprises</strong>. Windows
+              accepte <code>Photo.jpg</code> pour <code>photo.jpg</code>, mais GitHub Pages non : la page marchera
+              chez toi et cassera en ligne.
+            </li>
+            <li>
+              Un script qui touche aux éléments de la page est chargé avec <code>defer</code>, ou placé tout en bas
+              du <code>&lt;body&gt;</code>.
+            </li>
+            <li>Chaque image a un attribut <code>alt</code> : le texte affiché si l'image ne charge pas.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Le navigateur demande d'abord le HTML, puis tous les fichiers que le HTML cite.</li>
+            <li>HTML = le contenu. CSS = l'apparence. JavaScript = le comportement.</li>
+            <li>Un fichier qui n'arrive pas casse une partie de la page sans prévenir. L'onglet Réseau te le montre.</li>
+            <li>Les erreurs JavaScript s'affichent dans la Console. C'est le premier endroit où regarder.</li>
+            <li>Ouvre, recharge, regarde Réseau et Console. Toujours.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans le dossier <code>exercices/m1-01/</code> du projet. Tu n'as pas encore le projet sur
+            ta machine ? Sur la page GitHub du projet, clique sur <strong>Code</strong>, puis
+            <strong>Download ZIP</strong>. Utilise Chrome ou Edge : leurs outils sont identiques.
+          </p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Regarder une page se charger</h3>
+            <ol>
+              <li>
+                Ouvre <a href="../exercices/m1-01/galerie/index.html">exercices/m1-01/galerie/index.html</a> dans
+                ton navigateur.
+              </li>
+              <li>
+                Appuie sur <kbd>F12</kbd> (ou clic droit sur la page, puis <em>Inspecter</em>). Les outils de
+                développement s'ouvrent.
+              </li>
+              <li>Clique sur l'onglet <strong>Réseau</strong> (en anglais : <em>Network</em>).</li>
+              <li>Recharge la page avec <kbd>Ctrl</kbd> + <kbd>R</kbd>, en gardant les outils ouverts.</li>
+              <li>
+                Pour chaque ligne de la liste, note sur un papier : le nom du fichier, son type (colonne
+                <em>Type</em>) et sa position dans l'ordre.
+              </li>
+              <li>
+                Clique sur <code>style.css</code> dans la liste, puis sur l'onglet <strong>Réponse</strong>
+                (<em>Response</em>) : tu vois exactement ce que le navigateur a reçu.
+              </li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> une liste de 6 fichiers. D'abord <code>index.html</code>, puis
+              <code>style.css</code> et <code>galerie.js</code>, et enfin les 3 images. Tu sais expliquer pourquoi les
+              images arrivent en dernier.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>
+                La liste est vide ? Les outils doivent être ouverts <em>pendant</em> le rechargement. Vérifie aussi que
+                le filtre en haut de l'onglet est sur <strong>Tout</strong> (<em>All</em>).
+              </p>
+              <p>Pour comprendre l'ordre, regarde la colonne <strong>Initiateur</strong> (<em>Initiator</em>) : elle dit qui a demandé chaque fichier.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li><code>index.html</code> (document) : c'est toi qui l'as demandé.</li>
+                <li><code>style.css</code> (stylesheet) : demandé par le HTML.</li>
+                <li><code>galerie.js</code> (script) : demandé par le HTML.</li>
+                <li><code>plateau.svg</code>, <code>lagune.svg</code>, <code>marche.svg</code> : demandés par <code>galerie.js</code>.</li>
+              </ol>
+              <p>
+                Les images arrivent en dernier parce qu'elles ne sont pas écrites dans le HTML. Le navigateur ne les
+                découvre qu'au moment où le JavaScript les ajoute. La colonne Initiateur le confirme : elle indique
+                <code>galerie.js</code> pour les trois images.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Prédire, puis vérifier une page faite par Claude</h3>
+            <ol>
+              <li>Crée un dossier vide <code>ma-galerie</code> où tu veux sur ton ordinateur.</li>
+              <li>Ouvre Claude Code dans ce dossier (ou Claude sur le web) et envoie ce message :</li>
+            </ol>
+            <pre><code>Crée une petite galerie photo en 3 fichiers séparés : index.html,
+style.css et galerie.js. Le JavaScript affiche 4 images à partir
+d'un tableau. Utilise des images de https://picsum.photos.
+N'utilise aucune bibliothèque.</code></pre>
+            <ol start="3">
+              <li>
+                <strong>Avant d'ouvrir la page</strong>, lis le <code>&lt;head&gt;</code> de <code>index.html</code>
+                et écris ta prédiction : quels fichiers seront demandés, et dans quel ordre ?
+              </li>
+              <li>Ouvre la page et compare ta prédiction avec l'onglet Réseau.</li>
+              <li>
+                Demande à Claude : « Explique-moi, ligne par ligne, la balise &lt;head&gt; de index.html. » Compare
+                son explication avec ce que tu as observé.
+              </li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> ta prédiction correspond à l'onglet Réseau. Pour chaque fichier, tu
+              sais dire qui l'a demandé : le HTML ou le JavaScript.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>
+                Plusieurs lignes pour une seule image ? C'est normal avec picsum.photos : l'adresse de départ renvoie
+                vers une autre adresse (code 302), puis l'image arrive. Tu verras ce mécanisme au module 2.
+              </p>
+              <p>La galerie reste vide ? Regarde la Console avant tout.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>
+                Ordre habituel : <code>index.html</code>, puis <code>style.css</code> et <code>galerie.js</code>, puis
+                les 4 images (initiateur : <code>galerie.js</code>).
+              </p>
+              <p>
+                Si la galerie est vide et que la Console affiche
+                <code>Cannot read properties of null</code>, alors Claude a placé le script dans le
+                <code>&lt;head&gt;</code> sans <code>defer</code>. Le script s'exécute avant que la
+                <code>&lt;div&gt;</code> existe, et il ne la trouve pas. La correction : ajouter <code>defer</code>.
+                Si ça t'est arrivé, bravo : tu viens de trouver ton premier bug d'IA.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Réparer la galerie cassée</h3>
+            <p>
+              Quelqu'un a modifié la galerie, et maintenant
+              <a href="../exercices/m1-01/galerie-cassee/index.html">exercices/m1-01/galerie-cassee/</a> s'affiche
+              sans style et sans photos. Il y a <strong>3 problèmes</strong>. Trouve-les avec les onglets Réseau et
+              Console uniquement, sans demander à l'IA, puis corrige les fichiers dans ton éditeur.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> la page est identique à la galerie de l'exercice 1. L'onglet Réseau
+              n'a aucune ligne rouge et la Console est vide.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Compare le nom des fichiers demandés (onglet Réseau) avec les fichiers qui existent vraiment dans le dossier.</li>
+                <li>Une erreur dans la Console donne le fichier et le numéro de la ligne. Clique dessus.</li>
+                <li>Corrige un problème, recharge, et regarde à nouveau : un bug peut en cacher un autre.</li>
+              </ul>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li>
+                  <strong>Pas de style</strong> : <code>index.html</code> demande <code>css/style.css</code>, mais le
+                  fichier est à la racine du dossier. Correction : <code>href="style.css"</code>.
+                </li>
+                <li>
+                  <strong>Erreur dans la Console</strong> : <code>Cannot read properties of null (reading
+                  'append')</code>. Dans <code>galerie.js</code>, le code cherche <code>#photo</code>, alors que la
+                  <code>&lt;div&gt;</code> s'appelle <code>photos</code>. Correction :
+                  <code>querySelector("#photos")</code>.
+                </li>
+                <li>
+                  <strong>Images en rouge dans Réseau</strong> (visible seulement après la correction 2) : le code
+                  cherche les images dans <code>photos/</code>, alors que le dossier s'appelle <code>images/</code>.
+                  Correction : <code>"images/" + photo.fichier</code>.
+                </li>
+              </ol>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. L'IA t'a livré une page : le texte s'affiche, mais sans aucune mise en forme. Que regardes-tu en premier ?</legend>
+            <label><input type="radio" name="q1" /> La Console, pour chercher une erreur JavaScript.</label>
+            <label><input type="radio" name="q1" /> L'onglet Réseau, pour voir si le fichier CSS est bien arrivé.</label>
+            <label><input type="radio" name="q1" /> Je demande à l'IA de tout réécrire.</label>
+            <p class="explication" hidden>
+              La mise en forme vient du CSS. Si elle manque complètement, le fichier CSS n'est probablement jamais
+              arrivé : un mauvais chemin dans <code>&lt;link&gt;</code>. L'onglet Réseau te le montre en rouge.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. Dans la galerie, pourquoi les images arrivent-elles après <code>galerie.js</code> ?</legend>
+            <label><input type="radio" name="q2" /> Les images sont toujours chargées en dernier.</label>
+            <label><input type="radio" name="q2" /> Les images sont plus lourdes que les autres fichiers.</label>
+            <label><input type="radio" name="q2" /> C'est le JavaScript qui ajoute les images à la page.</label>
+            <p class="explication" hidden>
+              Le navigateur ne peut demander un fichier qu'après l'avoir découvert. Ici, les balises
+              <code>&lt;img&gt;</code> n'existent qu'une fois <code>galerie.js</code> exécuté.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. Que fait l'attribut <code>defer</code> sur une balise <code>&lt;script&gt;</code> ?</legend>
+            <label><input type="radio" name="q3" /> Le script est téléchargé tout de suite, mais exécuté après la lecture de tout le HTML.</label>
+            <label><input type="radio" name="q3" /> Le script est téléchargé plus tard, quand la page est inactive.</label>
+            <label><input type="radio" name="q3" /> Il empêche le script de produire des erreurs.</label>
+            <p class="explication" hidden>
+              Avec <code>defer</code>, le script attend que tout le HTML ait été lu avant de s'exécuter. Il trouve donc
+              les éléments qu'il cherche. Sans <code>defer</code> dans le <code>&lt;head&gt;</code>, il s'exécute trop
+              tôt.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JavaScript et le DOM · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m1-04">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 1.4</p>
+          <h1>JavaScript et le DOM</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            Le fichier HTML n'est que le plan de départ. Une fois qu'il l'a lu, le navigateur en fait le
+            <strong>DOM</strong> : un arbre d'objets gardé en mémoire, qui représente la page vivante. Chaque balise
+            devient un objet que JavaScript peut lire et modifier : ajouter un élément, changer un texte, cacher un
+            bloc.
+          </p>
+          <p>
+            JavaScript agit en réponse à des <strong>événements</strong> : un clic, une touche pressée, l'envoi d'un
+            formulaire. Et retiens bien ceci : JavaScript modifie le DOM, <strong>jamais le fichier HTML</strong>.
+            Recharge la page, et tout ce qu'il a ajouté disparaît, sauf si tu l'as sauvegardé quelque part.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>Une liste de tâches. Le HTML prévoit un formulaire et une liste vide :</p>
+          <pre><code>&lt;form id="form-tache"&gt;
+  &lt;label for="nouvelle"&gt;Nouvelle tâche&lt;/label&gt;
+  &lt;input id="nouvelle" name="nouvelle" required&gt;
+  &lt;button type="submit"&gt;Ajouter&lt;/button&gt;
+&lt;/form&gt;
+&lt;ul id="liste"&gt;&lt;/ul&gt;</code></pre>
+          <p>Le JavaScript fait toujours les mêmes 5 gestes :</p>
+          <pre><code>// 1. Trouver les éléments
+const form = document.querySelector("#form-tache");
+const champ = document.querySelector("#nouvelle");
+const liste = document.querySelector("#liste");
+
+// 2. Écouter un événement
+form.addEventListener("submit", (evenement) =&gt; {
+  evenement.preventDefault();          // empêche la page de se recharger
+
+  const li = document.createElement("li");   // 3. Créer un élément
+  li.textContent = champ.value;              // 4. Y mettre du texte
+  liste.append(li);                          // 5. L'accrocher dans le DOM
+
+  champ.value = "";
+});</code></pre>
+          <p>
+            Tu n'as pas besoin de savoir l'écrire de mémoire. Tu dois savoir le <strong>lire</strong> : où on
+            cherche les éléments, quel événement on écoute, ce qu'on modifie.
+          </p>
+          <h3>Le piège de <code>innerHTML</code></h3>
+          <p>L'IA écrit souvent ceci à la place de l'étape 4 :</p>
+          <pre><code>li.innerHTML = champ.value;   // DANGER</code></pre>
+          <p>
+            <code>textContent</code> affiche le texte tel quel. <code>innerHTML</code>, lui, le lit comme du HTML. Si
+            quelqu'un tape <code>&lt;img src=x onerror="alert('piraté')"&gt;</code>, le navigateur exécute le code.
+            C'est une faille appelée XSS (on l'étudie en détail à la leçon 3.2). Règle simple : du texte venant d'un
+            utilisateur passe toujours par <code>textContent</code>.
+          </p>
+          <h3>Code source ou DOM ?</h3>
+          <p>
+            <kbd>Ctrl</kbd> + <kbd>U</kbd> affiche le <strong>code source</strong> : le fichier HTML d'origine, celui
+            qui a été téléchargé. L'onglet <strong>Éléments</strong> des outils montre le <strong>DOM</strong> : la
+            page telle qu'elle est maintenant, avec tout ce que JavaScript a ajouté. Quand tu cherches un bug
+            d'affichage, c'est le DOM qu'il faut regarder.
+          </p>
+        </section>
+
+        <section class="bloc" id="video-bloc">
+          <h2>Vidéo</h2>
+          <div class="video" data-youtube=""></div>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Quand l'IA ajoute ou modifie du JavaScript :</p>
+          <ul class="liste-verif">
+            <li>Le texte saisi par un utilisateur est inséré avec <code>textContent</code>, jamais avec <code>innerHTML</code>.</li>
+            <li>Un formulaire géré en JavaScript appelle <code>preventDefault()</code>, sinon la page se recharge.</li>
+            <li>Le script est chargé avec <code>defer</code>, ou placé après les éléments qu'il utilise.</li>
+            <li>La Console reste vide après chaque action : ajouter, supprimer, recharger.</li>
+            <li>Teste les cas limites : champ vide, texte très long, caractères spéciaux (<code>&lt; &gt; " é</code>).</li>
+            <li>L'IA n'a modifié que ce que tu as demandé. Tu le vérifies avec <code>git diff</code> (exercice 2).</li>
+            <li>Si les données doivent survivre au rechargement, elles sont sauvegardées, et tu l'as testé en rechargeant.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Le DOM est la version vivante de la page. JavaScript modifie le DOM, pas le fichier HTML.</li>
+            <li>Toujours le même schéma : trouver un élément, écouter un événement, modifier le DOM.</li>
+            <li><code>textContent</code> pour du texte. <code>innerHTML</code> avec du texte d'utilisateur = faille.</li>
+            <li>Tout ce que JavaScript ajoute disparaît au rechargement, sauf si c'est sauvegardé.</li>
+            <li>Après chaque modification de l'IA : relis le diff, puis teste les cas limites.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>Les fichiers sont dans <code>exercices/m1-04/taches/</code>.</p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Suivre un clic jusqu'au DOM</h3>
+            <ol>
+              <li>
+                Ouvre <code>exercices/m1-04/taches/app.js</code> dans ton éditeur. Juste après la ligne
+                <code>evenement.preventDefault();</code>, ajoute :
+                <pre><code>console.log("Tâche ajoutée :", champ.value);</code></pre>
+              </li>
+              <li>Ouvre <a href="../exercices/m1-04/taches/index.html">la page</a> dans le navigateur, puis <kbd>F12</kbd> et l'onglet <strong>Console</strong>.</li>
+              <li>Ajoute trois tâches. Chaque ajout affiche une ligne dans la Console.</li>
+              <li>
+                Passe dans l'onglet <strong>Éléments</strong> et déplie <code>&lt;ul id="liste"&gt;</code>. Ajoute une
+                quatrième tâche en regardant l'arbre : le nouveau <code>&lt;li&gt;</code> apparaît et clignote.
+              </li>
+              <li>Appuie sur <kbd>Ctrl</kbd> + <kbd>U</kbd> pour voir le code source. Cherche <code>&lt;ul id="liste"&gt;</code>.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> les logs dans la Console, les <code>&lt;li&gt;</code> visibles dans
+              Éléments, et une liste vide dans le code source. Tu sais expliquer pourquoi.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Rien dans la Console ? As-tu enregistré <code>app.js</code> puis rechargé la page ?</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>
+                Le code source montre le fichier tel qu'il a été téléchargé : la liste y est vide. Les
+                <code>&lt;li&gt;</code> n'existent que dans le DOM, en mémoire, parce que JavaScript les y a ajoutés.
+                Recharge la page : ils disparaissent.
+              </p>
+              <p>
+                <code>console.log</code> est ton premier outil de diagnostic : il te montre ce que contient une
+                variable à un moment précis. Pense à retirer ces lignes quand tu as fini.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire ajouter « Supprimer » et relire le diff</h3>
+            <ol>
+              <li>
+                Copie le dossier <code>taches</code> en dehors du projet, par exemple dans
+                <code>Documents/exos/taches</code>. Ouvre un terminal dans cette copie et tape :
+                <pre><code>git init
+git add .
+git commit -m "Version de départ"</code></pre>
+                Tu viens de prendre une photo du code avant que l'IA y touche (Git en détail : leçon 4.1).
+              </li>
+              <li>Ouvre Claude Code dans ce dossier et demande :</li>
+            </ol>
+            <pre><code>Dans app.js, ajoute un bouton « Supprimer » à chaque tâche.
+Un clic supprime uniquement cette tâche. Ne modifie rien
+d'autre que ce qui est nécessaire.</code></pre>
+            <ol start="3">
+              <li>Tape <code>git diff</code> dans le terminal. Les lignes en <code>+</code> ont été ajoutées, celles en <code>-</code> supprimées. Lis chaque ligne.</li>
+              <li>Teste : ajoute 3 tâches et supprime celle du milieu. Ajoute la tâche <code>&lt;b&gt;gras&lt;/b&gt;</code>. Elle doit s'afficher telle quelle, sans être mise en gras.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> la bonne tâche est supprimée, <code>&lt;b&gt;gras&lt;/b&gt;</code>
+              s'affiche en texte brut, le diff ne touche que ce qui est nécessaire, et la Console est vide.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Dans le diff, cherche <code>innerHTML</code>, et vérifie que <code>preventDefault</code> n'a pas disparu.</p>
+              <p>Le bouton Supprimer doit être un <code>&lt;button type="button"&gt;</code>. Sans <code>type="button"</code>, un bouton placé dans un formulaire l'envoie.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Un bon diff ressemble à ceci :</p>
+              <pre><code>   li.textContent = champ.value;
++  const supprimer = document.createElement("button");
++  supprimer.type = "button";
++  supprimer.textContent = "Supprimer";
++  supprimer.addEventListener("click", () =&gt; li.remove());
++  li.append(supprimer);
+   liste.append(li);</code></pre>
+              <p>Signaux d'alerte à refuser :</p>
+              <ul>
+                <li><code>li.innerHTML = `${champ.value} &lt;button&gt;Supprimer&lt;/button&gt;`</code> : c'est la faille XSS. Le test <code>&lt;b&gt;gras&lt;/b&gt;</code> l'aurait révélée.</li>
+                <li>Tout le fichier a été réécrit alors qu'on demandait un ajout.</li>
+                <li>Une suppression par position (<code>liste.children[2]</code>) qui retire la mauvaise tâche après une première suppression.</li>
+              </ul>
+              <p>Si le résultat ne te plaît pas, <code>git checkout -- app.js</code> remet le fichier comme sur la photo.</p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>« Mes tâches disparaissent quand je recharge »</h3>
+            <p>
+              Dans ta copie, fais en sorte que les tâches survivent au rechargement, en les enregistrant dans le
+              <code>localStorage</code> (un petit espace de stockage du navigateur). Tu peux faire écrire le code par
+              Claude. Mais c'est <strong>toi</strong> qui définis et passes les tests qui prouvent que ça marche.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> une liste de tests écrite par toi, tous réussis, et un diff relu.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Les données sont visibles dans <kbd>F12</kbd>, onglet <strong>Application</strong>, puis <em>Local Storage</em>. Ce site de cours range ta progression exactement là.</li>
+                <li>Pense à tout ce qui modifie la liste : ajouter, mais aussi supprimer.</li>
+                <li>Que se passe-t-il si la valeur enregistrée est abîmée ? Modifie-la toi-même dans l'onglet Application (remplace-la par <code>abc</code>), puis recharge.</li>
+              </ul>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Les tests à passer :</p>
+              <ol>
+                <li>Ajouter 2 tâches, recharger : elles sont toujours là.</li>
+                <li>En supprimer une, recharger : elle ne revient pas.</li>
+                <li>Fermer l'onglet, rouvrir la page : les tâches sont là.</li>
+                <li>Remplacer la valeur par <code>abc</code> dans Application, recharger : la page s'affiche quand même (une liste vide), sans erreur rouge.</li>
+                <li><code>&lt;b&gt;gras&lt;/b&gt;</code> s'affiche toujours en texte brut après un rechargement.</li>
+              </ol>
+              <p>Le test 4 est celui que l'IA oublie le plus. La lecture doit être protégée :</p>
+              <pre><code>function lire() {
+  try {
+    return JSON.parse(localStorage.getItem("taches")) || [];
+  } catch {
+    return [];   // valeur abîmée : on repart d'une liste vide au lieu de planter
+  }
+}</code></pre>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Tu ajoutes 3 tâches, puis tu ouvres le code source (<kbd>Ctrl</kbd> + <kbd>U</kbd>). La liste est vide. Pourquoi ?</legend>
+            <label><input type="radio" name="q1" /> C'est un bug de la page.</label>
+            <label><input type="radio" name="q1" /> Le code source montre le fichier d'origine. Les tâches n'existent que dans le DOM, en mémoire.</label>
+            <label><input type="radio" name="q1" /> Le navigateur n'a pas encore enregistré le fichier.</label>
+            <p class="explication" hidden>
+              JavaScript ne réécrit jamais le fichier HTML. Il modifie le DOM. Pour voir la page réelle, utilise
+              l'onglet Éléments.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. L'IA a écrit <code>li.innerHTML = champ.value;</code>. Quel est le risque ?</legend>
+            <label><input type="radio" name="q2" /> Aucun, c'est équivalent à <code>textContent</code>.</label>
+            <label><input type="radio" name="q2" /> La page sera un peu plus lente.</label>
+            <label><input type="radio" name="q2" /> Si quelqu'un tape du HTML ou du code, le navigateur l'exécute.</label>
+            <p class="explication" hidden>
+              <code>innerHTML</code> interprète le texte comme du HTML. C'est la porte d'entrée de la faille XSS.
+              <code>textContent</code> affiche le texte tel quel, sans danger.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. À chaque ajout, la page se recharge et la tâche disparaît aussitôt. Qu'est-ce qui manque ?</legend>
+            <label><input type="radio" name="q3" /> <code>evenement.preventDefault()</code> dans l'écouteur de l'envoi.</label>
+            <label><input type="radio" name="q3" /> L'attribut <code>defer</code> sur le script.</label>
+            <label><input type="radio" name="q3" /> L'attribut <code>required</code> sur le champ.</label>
+            <p class="explication" hidden>
+              Par défaut, envoyer un formulaire charge une nouvelle page. <code>preventDefault()</code> annule ce
+              comportement, pour que JavaScript s'occupe de tout.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

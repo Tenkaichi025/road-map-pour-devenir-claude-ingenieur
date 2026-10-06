@@ -96,6 +96,12 @@ kbd {
   font-size: 0.88em;
   font-variant-ligatures: none; /* « </ » reste deux caractères, comme dans l'éditeur */
 }
+kbd {
+  border: 1px solid var(--gris);
+  border-bottom-width: 2px;
+  padding: 0 0.3em;
+  white-space: nowrap;
+}
 :not(pre) > code {
   background: var(--filet);
   padding: 0.1em 0.35em;
@@ -106,6 +112,12 @@ pre {
   padding: 1rem 1.25rem;
   overflow-x: auto;
   line-height: 1.55;
+}
+@media (max-width: 599px) {
+  pre {
+    font-size: 0.78rem;
+    padding: 0.85rem 1rem;
+  }
 }
 .cadre {
   max-width: 76rem;

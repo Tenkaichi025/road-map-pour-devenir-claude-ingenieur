@@ -1,0 +1,62 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #eef3f6;
+  color: #1c2830;
+}
+.tableau {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+.entete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.maintenant {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  background: white;
+}
+.temperature {
+  font-size: 3rem;
+  font-weight: bold;
+  margin: 0;
+}
+.details {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.2rem 1rem;
+  margin: 0;
+}
+.details dd {
+  margin: 0;
+  font-weight: bold;
+}
+.previsions {
+  list-style: none;
+  padding: 0;
+}
+.previsions li {
+  display: grid;
+  grid-template-columns: 6rem 3rem 1fr;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #cfdbe2;
+}

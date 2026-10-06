@@ -42,6 +42,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - Depuis Git Bash, `kill -INT` n'arrête pas un serveur Node sous Windows : tester les arrêts/redémarrages en PowerShell.
 - Mon propre serveur 2.4 renvoyait 400 à la déconnexion (corps vide → `JSON.parse("")` échoue) : trouvé par le test
   « relire les notes après déconnexion ». Corrigé : corps vide = `{}`.
+- Leçons de sécurité : deux réponses interrompues par un filtre de sécurité (3.1, 3.2). Règle adoptée avec Wilfried :
+  cours 100 % défensifs (audit, correction, preuve), marqueurs inoffensifs, aucune charge d'attaque ni contournement.
 - Chrome headless ne descend pas sous 500 px de large → tests mobiles via une iframe de 375 px.
 - Exercice « page qui déborde » : une longue URL ne débordait pas (Chrome coupe après les « / ») → cause
   remplacée par `white-space: nowrap` sur le titre. Leçon : toujours vérifier qu'un bug « pédagogique » se produit vraiment.
@@ -75,4 +77,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   d'attaque avancées. `exercices/m3-01/` : boutique vulnérable (port 3008 : recherche, filtre IN, tri ORDER BY,
   erreurs SQL renvoyées au client), `boutique/verifier.js` (11 tests défensifs : 4/11 sur la version fournie,
   11/11 sur la version corrigée), `outils/audit-sql.js` (premier tri ; rate volontairement la ligne LIKE).
-- Ensuite : leçon 3.2 (XSS).
+- Leçon 3.2 (XSS) rédigée, 100 % défensive : aucun code d'attaque, test au marqueur inoffensif `<b>test</b>`.
+  `exercices/m3-02/avis` (port 3009 : liste serveur stockée, recherche réfléchie, innerHTML, sans CSP),
+  `avis/verifier.js` (8 tests : 3/8 version fournie, 8/8 version corrigée ; vérifié aussi dans Chrome : gras vs texte,
+  CSP sans casse), `outils/audit-xss.js` (premier tri ; rate le gabarit multi-lignes de la recherche).
+- Ensuite : leçon 3.3 (secrets et variables d'environnement).

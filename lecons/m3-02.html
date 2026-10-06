@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Faille XSS : protéger l'affichage · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m3-02">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 3.2</p>
+          <h1>Faille XSS : protéger l'affichage</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            La faille XSS, c'est l'injection SQL, mais dans la page. Un texte écrit par un visiteur (un avis, un prénom,
+            une recherche) est réaffiché dans une page. Si la page le traite comme du <strong>HTML</strong> au lieu de
+            le traiter comme du <strong>texte</strong>, le visiteur peut y glisser des balises, et donc du code. Ce
+            code s'exécute ensuite chez les autres visiteurs, avec leurs droits : il peut agir en leur nom, afficher un
+            faux formulaire de connexion, ou lire ce que la page affiche.
+          </p>
+          <p>
+            Deux familles. La XSS <strong>stockée</strong> : le texte est enregistré (un avis, un commentaire, un
+            profil), puis affiché à tous ceux qui ouvrent la page. La XSS <strong>réfléchie</strong> : le texte vient
+            de l'adresse (une recherche, un message d'erreur) et il est renvoyé tout de suite à celui qui ouvre ce lien.
+          </p>
+          <p>
+            La protection tient en une règle : <strong>au moment de l'affichage</strong>, une donnée reste du texte.
+            Dans le navigateur, on utilise <code>textContent</code> plutôt que <code>innerHTML</code>. Sur le serveur,
+            on <strong>échappe</strong> chaque valeur insérée dans du HTML. Et on ajoute une deuxième ceinture :
+            l'en-tête <strong>Content-Security-Policy</strong> (CSP), qui interdit au navigateur d'exécuter des
+            scripts qui ne viennent pas de ton site.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Les avis clients du maquis « Le Baobab ». Les clients publient un avis. La page les affiche à trois
+            endroits, chacun construit d'une façon différente. Pour tester, pas besoin d'attaque : un
+            <strong>marqueur inoffensif</strong> suffit. Publie un avis signé <code>&lt;b&gt;test&lt;/b&gt;</code>. Si
+            « test » apparaît en gras, la donnée a été lue comme du HTML : la page est vulnérable. Si tu vois
+            <code>&lt;b&gt;test&lt;/b&gt;</code> tel quel, elle est protégée.
+          </p>
+
+          <h3>Les trois affichages écrits par l'IA</h3>
+          <pre><code>// 1. Sur le serveur : la liste de tous les avis (XSS stockée)
+`&lt;li&gt;&lt;strong&gt;${a.auteur}&lt;/strong&gt; (${a.note}/5) : ${a.texte}&lt;/li&gt;`
+
+// 2. Sur le serveur : le mot cherché, réaffiché (XSS réfléchie)
+`&lt;p&gt;Résultats pour « ${q} » : ${trouves.length} avis.&lt;/p&gt;`
+
+// 3. Dans le navigateur : les 3 derniers avis
+document.querySelector("#derniers").innerHTML = avis.map((a) =&gt; `&lt;li&gt;${a.auteur} : ${a.texte}&lt;/li&gt;`).join("");</code></pre>
+          <p>Avec le marqueur, « test » s'affiche en gras aux trois endroits. Et la réponse du serveur n'a aucun en-tête CSP.</p>
+
+          <h3>Côté serveur : échapper</h3>
+          <p>
+            Échapper, c'est remplacer les cinq caractères qui ont un sens en HTML par leur version « texte ». Le
+            navigateur les affiche, mais ne les interprète plus :
+          </p>
+          <pre><code>function echapper(valeur) {
+  return String(valeur)
+    .replaceAll("&amp;", "&amp;amp;")      // toujours en premier
+    .replaceAll("&lt;", "&amp;lt;")
+    .replaceAll("&gt;", "&amp;gt;")
+    .replaceAll('"', "&amp;quot;")
+    .replaceAll("'", "&amp;#39;");
+}
+
+`&lt;li&gt;&lt;strong&gt;${echapper(a.auteur)}&lt;/strong&gt; (${echapper(a.note)}/5) : ${echapper(a.texte)}&lt;/li&gt;`
+`&lt;p&gt;Résultats pour « ${echapper(q)} » : ${trouves.length} avis.&lt;/p&gt;`</code></pre>
+          <p>
+            Échapper n'est pas « nettoyer ». On ne retire rien, on ne devine pas ce qui est dangereux : on transforme
+            <strong>tous</strong> les caractères spéciaux, <strong>au moment de l'affichage</strong>. La donnée
+            enregistrée reste intacte. Les moteurs de gabarits (EJS, Handlebars, Twig, Blade…) le font par défaut, sauf
+            avec leur syntaxe « brute » : <code>&lt;%-</code>, <code>{{{ }}}</code>, <code>|raw</code>,
+            <code>{!! !!}</code>.
+          </p>
+
+          <h3>Côté navigateur : textContent</h3>
+          <pre><code>const li = document.createElement("li");
+const auteur = document.createElement("strong");
+auteur.textContent = a.auteur;          // toujours du texte, quoi qu'il contienne
+li.append(auteur, " : " + a.texte);     // append d'une chaîne = du texte aussi</code></pre>
+
+          <h3>La deuxième ceinture : la CSP</h3>
+          <pre><code>Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'</code></pre>
+          <p>
+            Cet en-tête dit au navigateur : « n'exécute que les scripts qui viennent de mon site, sous forme de
+            fichiers ». Les scripts écrits directement dans la page, ou venus d'ailleurs, sont bloqués. Si une erreur
+            d'affichage passe un jour, la CSP limite fortement les dégâts. Elle ne remplace pas l'échappement : elle
+            le complète. Conséquence pratique : avec une CSP, tout ton JavaScript doit être dans des fichiers
+            <code>.js</code>, sans <code>onclick="…"</code> ni <code>&lt;script&gt;</code> écrit dans la page.
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 292" role="img" aria-labelledby="schema-32-titre schema-32-desc">
+              <title id="schema-32-titre">Le parcours d'une donnée, de la saisie à l'affichage</title>
+              <desc id="schema-32-desc">
+                Un avis est saisi, puis stocké tel quel par le serveur. Le moment critique est l'affichage. Avec
+                innerHTML ou une valeur insérée sans échappement, le marqueur b test devient du HTML et s'affiche en
+                gras. Avec textContent ou la fonction echapper, il reste du texte et s'affiche tel quel. En plus, l'en-tête
+                CSP empêche l'exécution d'un script qui ne vient pas du site, même si une erreur d'affichage passe.
+              </desc>
+              <defs>
+                <marker id="fleche-32" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+                <marker id="fleche-32-l" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-laterite" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <rect class="s-cadre" x="0.75" y="1" width="88" height="38" />
+              <text class="s-ui" x="45" y="25" text-anchor="middle">Saisie</text>
+              <rect class="s-cadre" x="116" y="1" width="88" height="38" />
+              <text class="s-ui" x="160" y="25" text-anchor="middle">Stockage</text>
+              <rect class="s-boite-contenu" x="231" y="1" width="88" height="38" />
+              <text class="s-ui-laterite" x="275" y="25" text-anchor="middle">Affichage</text>
+              <line class="s-trait" x1="90" y1="20" x2="113" y2="20" marker-end="url(#fleche-32)" />
+              <line class="s-trait" x1="205" y1="20" x2="228" y2="20" marker-end="url(#fleche-32)" />
+
+              <text class="s-note" x="45" y="56" text-anchor="middle">un avis</text>
+              <text class="s-note" x="160" y="56" text-anchor="middle">gardé tel quel</text>
+              <text class="s-note s-note-laterite" x="320" y="56" text-anchor="end">le moment critique</text>
+              <text class="s-code" x="160" y="84" text-anchor="middle">auteur = "&lt;b&gt;test&lt;/b&gt;"</text>
+
+              <path class="s-lien" d="M160 92 V106 H75 V124" marker-end="url(#fleche-32-l)" />
+              <path class="s-trait" d="M160 92 V106 H244 V124" marker-end="url(#fleche-32)" />
+
+              <rect class="s-boite-contenu" x="1" y="128" width="148" height="76" />
+              <text class="s-code s-code-laterite" x="75" y="150" text-anchor="middle">innerHTML, ${…}</text>
+              <text class="s-ui" x="75" y="174" text-anchor="middle">test</text>
+              <text class="s-note s-note-laterite" x="75" y="194" text-anchor="middle">devient du HTML (gras)</text>
+
+              <rect class="s-cadre" x="171" y="128" width="148" height="76" />
+              <text class="s-code" x="245" y="150" text-anchor="middle">textContent</text>
+              <text class="s-code" x="245" y="174" text-anchor="middle">&lt;b&gt;test&lt;/b&gt;</text>
+              <text class="s-note" x="245" y="194" text-anchor="middle">reste du texte</text>
+
+              <rect class="s-cadre" x="0.75" y="220" width="318" height="66" />
+              <text class="s-ui" x="10" y="242">En plus : l'en-tête CSP</text>
+              <text class="s-note" x="10" y="262">un script qui ne vient pas de ton site ne s'exécute</text>
+              <text class="s-note" x="10" y="278">pas, même si une erreur d'affichage passe.</text>
+            </svg>
+            <figcaption>
+              La donnée n'est pas dangereuse en elle-même : elle le devient au moment où une page la lit comme du HTML.
+              C'est là, et seulement là, qu'on la protège.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Quand l'IA affiche des données venues des visiteurs :</p>
+          <ul class="liste-verif">
+            <li>Repère tous les endroits où une donnée devient du HTML : <code>innerHTML</code>, <code>insertAdjacentHTML</code>, <code>document.write</code>, du HTML construit avec <code>${…}</code>, les syntaxes « brutes » des gabarits. Un outil aide, mais il rate le HTML écrit sur plusieurs lignes.</li>
+            <li>Dans le navigateur : <code>textContent</code> pour toute donnée. <code>innerHTML</code> seulement avec du HTML fixe, écrit par toi.</li>
+            <li>Sur le serveur : chaque valeur insérée dans du HTML passe par une fonction d'échappement, ou par un gabarit qui échappe par défaut.</li>
+            <li>
+              Refuse les <strong>faux nettoyages</strong> : supprimer certains mots ou certaines balises, ne remplacer
+              qu'un seul caractère, ou modifier le texte avant de l'enregistrer. Ces méthodes laissent passer des cas
+              auxquels l'IA n'a pas pensé, et elles abîment les données normales. Si le site doit vraiment accepter du
+              HTML (un éditeur de texte riche), il faut une bibliothèque éprouvée comme DOMPurify, jamais une regex.
+            </li>
+            <li>Pas de double échappement : « C&amp;#39;est » ne doit jamais apparaître à l'écran.</li>
+            <li>Teste les deux familles : les données stockées (avis, profils, commentaires) <strong>et</strong> réfléchies (recherche, messages d'erreur qui répètent ta saisie, paramètres d'adresse).</li>
+            <li>
+              Un en-tête CSP est envoyé avec <code>script-src</code> ou <code>default-src 'self'</code>, et
+              <strong>sans</strong> <code>'unsafe-inline'</code>. Quand la CSP bloque un script écrit dans la page,
+              l'IA ajoute souvent <code>'unsafe-inline'</code>. La vraie correction : déplacer ce script dans un fichier.
+            </li>
+            <li>Une adresse fournie par un visiteur et placée dans un lien doit commencer par <code>https://</code>. Et le cookie de session reste <code>HttpOnly</code> (leçon 2.4).</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>XSS : une donnée de visiteur, lue comme du HTML par la page. Stockée (enregistrée) ou réfléchie (renvoyée tout de suite).</li>
+            <li>On protège au moment de l'affichage : <code>textContent</code> dans le navigateur, échappement sur le serveur.</li>
+            <li>Échapper, ce n'est pas nettoyer : on transforme tous les caractères spéciaux, et la donnée enregistrée reste intacte.</li>
+            <li>La CSP est une deuxième ceinture : <code>'self'</code>, jamais <code>'unsafe-inline'</code>.</li>
+            <li>Pour tester, un marqueur inoffensif suffit : <code>&lt;b&gt;test&lt;/b&gt;</code> ne doit jamais apparaître en gras.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans <code>exercices/m3-02/</code>. Les avis se lancent avec <code>node serveur.js</code>
+            (port <strong>3009</strong>). <code>node verifier.js</code> (dans <code>avis</code>) est le banc de test : il
+            publie le marqueur et vérifie 8 points. <code>node audit-xss.js &lt;dossier&gt;</code> (dans
+            <code>outils</code>) repère les endroits dangereux de n'importe quel projet.
+          </p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Le marqueur, en vrai</h3>
+            <ol>
+              <li>Dans <code>exercices/m3-02/avis</code>, lance <code>node serveur.js</code> et ouvre <code>http://localhost:3009</code>.</li>
+              <li>Publie un avis avec le prénom <code>&lt;b&gt;test&lt;/b&gt;</code>. Regarde « Les 3 derniers avis » et « Tous les avis ».</li>
+              <li>Cherche <code>&lt;b&gt;test&lt;/b&gt;</code> avec le champ de recherche. Regarde la phrase « Résultats pour… ».</li>
+              <li><kbd>F12</kbd> → onglet Éléments : trouve la balise <code>&lt;b&gt;</code> que ta donnée a créée dans la page.</li>
+              <li>Onglet Réseau → recharge → clique sur la première ligne → en-têtes de la réponse. Y a-t-il un <code>Content-Security-Policy</code> ?</li>
+              <li>Dans un deuxième terminal, lance <code>node verifier.js</code> (dans <code>avis</code>), puis <code>node audit-xss.js ../avis</code> (dans <code>outils</code>).</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> « test » en gras aux trois endroits, une vraie balise
+              <code>&lt;b&gt;</code> dans l'onglet Éléments, aucune CSP, 5 échecs sur 8 au banc de test, et la ligne que
+              l'outil d'audit a ratée.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Compare la liste de l'outil d'audit avec les trois affichages de la section « Exemple concret ». Lequel manque, et pourquoi ?</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li>Trois affichages vulnérables : <code>serveur.js</code> ligne 57 (tous les avis, XSS stockée), <code>serveur.js</code> ligne 101 (la recherche, XSS réfléchie) et <code>public/app.js</code> lignes 4 à 7 (<code>innerHTML</code>).</li>
+                <li>
+                  <strong>L'outil rate la ligne 101.</strong> Le HTML de la recherche est écrit sur plusieurs lignes, et
+                  l'outil lit une ligne à la fois : il ne voit pas que <code>${q}</code> est à l'intérieur d'un gabarit
+                  HTML. Comme en 3.1 : un outil trie, il ne prouve rien.
+                </li>
+                <li>Aucun en-tête CSP : rien ne limiterait les dégâts si une erreur passait.</li>
+                <li>Le banc de test : 3 réussis, 5 échecs (les deux pages serveur, la CSP deux fois, <code>innerHTML</code>).</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire corriger par Claude, et refuser les faux nettoyages</h3>
+            <ol>
+              <li>Copie le dossier <code>avis</code> dans un dossier de travail. Dans la copie, demande à Claude :</li>
+            </ol>
+            <pre><code>Corrige les affichages de serveur.js et public/app.js :
+- sur le serveur, échappe chaque valeur insérée dans du HTML avec une
+  fonction echapper() qui remplace &amp; &lt; &gt; " et ' ;
+- dans app.js, construis les éléments avec createElement et
+  textContent, sans innerHTML ;
+- ajoute à toutes les pages HTML l'en-tête Content-Security-Policy :
+  default-src 'self'; object-src 'none'; base-uri 'self';
+  frame-ancestors 'none'
+Ne modifie pas les données enregistrées.</code></pre>
+            <ol start="2">
+              <li>Relance le serveur et <code>node verifier.js</code> : 8 réussis attendus.</li>
+              <li>Ouvre la page : le formulaire marche-t-il encore ? La Console affiche-t-elle une erreur liée à la CSP ?</li>
+              <li>Publie à nouveau le marqueur, puis un avis normal comme « C'est délicieux, l'attiéké &amp; le poisson ! ». Les deux doivent s'afficher exactement comme tu les as tapés.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 8 sur 8 au banc de test, le marqueur affiché tel quel, le texte normal
+              intact (apostrophes et « &amp; » compris), et aucune erreur dans la Console.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Le test « L'avis est stocké tel quel » est là pour attraper les nettoyages faits à l'enregistrement, et le test « Pas de double échappement » pour les échappements faits deux fois.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Le code attendu est celui de la section « Exemple concret ». Les fausses corrections à refuser :</p>
+              <ul>
+                <li>Un nettoyage du texte avant l'enregistrement : le test « stocké tel quel » échoue, et les avis légitimes sont abîmés.</li>
+                <li>Une liste de balises interdites ou un <code>.replace</code> qui ne traite qu'un caractère : incomplet par nature.</li>
+                <li>L'échappement fait deux fois (à l'enregistrement et à l'affichage) : « C&amp;#39;est » apparaît à l'écran.</li>
+                <li><code>'unsafe-inline'</code> ajouté à la CSP « pour que ça marche » : la protection perd l'essentiel de son intérêt.</li>
+              </ul>
+              <p>
+                Après la correction, l'outil d'audit signale encore la ligne de la liste des avis : elle contient des
+                <code>${…}</code> dans du HTML. Mais chaque valeur passe par <code>echapper()</code>. C'est une fausse
+                alerte, et c'est à toi de la classer.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Auditer l'affichage de ton propre projet</h3>
+            <p>
+              Lance <code>node audit-xss.js</code> sur un de tes projets. Pour chaque ligne signalée, puis pour chaque
+              gabarit HTML écrit sur plusieurs lignes, détermine d'où viennent les données affichées et si elles sont
+              protégées. Ensuite, sur ta version locale, publie le marqueur <code>&lt;b&gt;test&lt;/b&gt;</code> dans
+              chaque champ libre (avis, nom, adresse de livraison, message de contact) et regarde partout où il
+              s'affiche, y compris dans l'espace d'administration. Enfin, vérifie si ton site envoie une CSP.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un rapport (fichier, ligne, donnée, verdict), la liste des champs
+              testés avec le marqueur, la présence ou l'absence de CSP, et une demande de correction pour Claude.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Les pages d'administration sont souvent oubliées : c'est pourtant là qu'un avis piégé serait lu par la personne qui a le plus de droits.</li>
+                <li>Pour la CSP, regarde les en-têtes de réponse de la page principale de <strong>ton</strong> site (<kbd>F12</kbd> → Réseau). Si ton site passe par un hébergeur ou un CDN, la CSP peut se régler dans son tableau de bord.</li>
+                <li>Une CSP stricte peut casser des scripts écrits dans tes pages : note-les, il faudra les déplacer dans des fichiers.</li>
+                <li>Ne teste que tes propres sites.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Le prénom saisi par un client doit s'afficher dans la page. Que choisis-tu ?</legend>
+            <label><input type="radio" name="q1" /> <code>element.innerHTML = prenom</code>, c'est plus court.</label>
+            <label><input type="radio" name="q1" /> <code>element.textContent = prenom</code> : le prénom reste du texte, quoi qu'il contienne.</label>
+            <label><input type="radio" name="q1" /> <code>innerHTML</code>, après avoir retiré le mot « script » du prénom.</label>
+            <p class="explication" hidden>
+              <code>textContent</code> affiche exactement ce qui a été tapé, sans jamais l'interpréter. Retirer certains
+              mots est un faux nettoyage : d'autres balises restent possibles, et le prénom est abîmé.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. L'IA « protège » les avis en modifiant leur texte avant de l'enregistrer dans la base. Qu'en penses-tu ?</legend>
+            <label><input type="radio" name="q2" /> C'est la meilleure méthode : la base ne contient plus rien de dangereux.</label>
+            <label><input type="radio" name="q2" /> C'est suffisant si on ajoute une CSP.</label>
+            <label><input type="radio" name="q2" /> C'est une fausse protection : elle abîme les données, oublie des cas, et ne protège pas les autres affichages. On échappe au moment de l'affichage.</label>
+            <p class="explication" hidden>
+              Le danger dépend de l'endroit où la donnée est affichée (une page HTML, un e-mail, une application
+              mobile…). C'est donc à chaque affichage de la protéger. Et une donnée abîmée à l'entrée l'est pour toujours.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. Après l'ajout d'une CSP, un script écrit dans la page ne marche plus. L'IA propose d'ajouter <code>'unsafe-inline'</code>. Que fais-tu ?</legend>
+            <label><input type="radio" name="q3" /> Je refuse, et je demande de déplacer ce script dans un fichier <code>.js</code>.</label>
+            <label><input type="radio" name="q3" /> J'accepte, l'important est que la page marche.</label>
+            <label><input type="radio" name="q3" /> Je supprime la CSP, elle pose trop de problèmes.</label>
+            <p class="explication" hidden>
+              <code>'unsafe-inline'</code> autorise justement les scripts écrits dans la page : c'est ce que la CSP devait
+              bloquer en cas de XSS. Déplacer le script dans un fichier garde la protection, et la page marche.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

@@ -37,6 +37,10 @@ Un schéma SVG par leçon, écrit directement dans la page : `<figure class="sch
 `s-laterite`, `s-repere`, `s-lien`, `s-filet`), jamais de couleur en dur : le mode sombre suit tout seul. Largeur
 de 320 unités pour rester lisible à 375 px. Ne pas écrire « sombre/clair » dans les légendes (ça s'inverse en mode sombre).
 
+## Leçons de sécurité (module 3)
+100 % défensives : repérer, corriger, prouver. Tests avec des marqueurs inoffensifs (`<b>test</b>`, apostrophe…).
+Jamais de charge d'attaque, de technique de contournement ou d'exploitation détaillée.
+
 ## Ton et langue
 Français simple, tutoiement, phrases courtes. Expliquer le jargon la première fois qu'il apparaît.
 

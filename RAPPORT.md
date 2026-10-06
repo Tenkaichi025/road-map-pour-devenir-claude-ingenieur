@@ -48,4 +48,5 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 
 ## État actuel & Prochaines étapes
 - Module 1 terminé et validé. Vidéos abandonnées (dossier `video/` supprimé, sections vidéo retirées des leçons).
-- Prochaine étape proposée : un schéma SVG par leçon du module 1 pour remplacer l'apport visuel des vidéos, puis le module 2.
+- Schéma 1.1 (chronologie du chargement, façon onglet Réseau) fait, en attente de validation du style.
+- Ensuite : schémas 1.2 à 1.5, puis module 2.

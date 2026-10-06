@@ -82,6 +82,65 @@
               les images, les demande, puis redessine la page.
             </li>
           </ol>
+          <p>Le même déroulé, dessiné comme l'onglet Réseau du navigateur. Le temps avance vers la droite :</p>
+          <figure class="schema">
+            <svg viewBox="0 0 320 340" role="img" aria-labelledby="schema-11-titre schema-11-desc">
+              <title id="schema-11-titre">Chronologie du chargement de la galerie</title>
+              <desc id="schema-11-desc">
+                index.html arrive en premier. Pendant sa lecture, le navigateur demande style.css et galerie.js. La page
+                s'affiche quand le CSS est arrivé. Puis galerie.js s'exécute et ajoute les images : c'est seulement à ce
+                moment que plateau.svg, lagune.svg et marche.svg sont demandées.
+              </desc>
+
+              <!-- Lignes de séparation, une par fichier -->
+              <g class="s-filet">
+                <line x1="0" y1="78" x2="320" y2="78" />
+                <line x1="0" y1="124" x2="320" y2="124" />
+                <line x1="0" y1="170" x2="320" y2="170" />
+                <line x1="0" y1="216" x2="320" y2="216" />
+                <line x1="0" y1="262" x2="320" y2="262" />
+                <line x1="0" y1="308" x2="320" y2="308" />
+              </g>
+
+              <!-- Repères (dessinés avant le texte, qui passe par-dessus) -->
+              <line class="s-repere" x1="136" y1="28" x2="136" y2="308" />
+              <line class="s-lien" x1="168" y1="163" x2="168" y2="316" />
+              <text class="s-note" x="132" y="20" text-anchor="end">la page s'affiche</text>
+              <text class="s-note" x="320" y="20" text-anchor="end">temps →</text>
+
+              <!-- Une ligne par fichier : son nom, qui l'a demandé, et sa barre de téléchargement -->
+              <text class="s-texte" x="0" y="50">index.html</text>
+              <text class="s-note" x="320" y="50" text-anchor="end">demandé par toi</text>
+              <rect class="s-barre" x="0" y="56" width="72" height="12" />
+
+              <text class="s-texte" x="0" y="96">style.css</text>
+              <text class="s-note" x="320" y="96" text-anchor="end">demandé par le HTML</text>
+              <rect class="s-barre" x="48" y="102" width="88" height="12" />
+
+              <text class="s-texte" x="0" y="142">galerie.js</text>
+              <text class="s-note" x="320" y="142" text-anchor="end">demandé par le HTML</text>
+              <rect class="s-barre" x="56" y="148" width="72" height="12" />
+              <rect class="s-laterite" x="144" y="145" width="24" height="18" />
+
+              <text class="s-texte s-texte-laterite" x="0" y="188">plateau.svg</text>
+              <text class="s-note" x="320" y="188" text-anchor="end">demandé par galerie.js</text>
+              <rect class="s-laterite" x="172" y="194" width="108" height="12" />
+
+              <text class="s-texte s-texte-laterite" x="0" y="234">lagune.svg</text>
+              <text class="s-note" x="320" y="234" text-anchor="end">demandé par galerie.js</text>
+              <rect class="s-laterite" x="176" y="240" width="128" height="12" />
+
+              <text class="s-texte s-texte-laterite" x="0" y="280">marche.svg</text>
+              <text class="s-note" x="320" y="280" text-anchor="end">demandé par galerie.js</text>
+              <rect class="s-laterite" x="180" y="286" width="84" height="12" />
+
+              <text class="s-note s-note-laterite" x="168" y="334" text-anchor="middle">galerie.js s'exécute et ajoute les images</text>
+            </svg>
+            <figcaption>
+              Barres neutres : les fichiers annoncés dans le HTML. Petit bloc latérite : l'exécution de
+              <code>galerie.js</code>. Barres latérite : les images, que le navigateur ne découvre qu'à ce moment-là.
+            </figcaption>
+          </figure>
           <p>
             Ici, la page est ouverte depuis ton disque : son adresse commence par <code>file://</code> et les fichiers
             viennent de ton ordinateur. Sur un vrai site, l'adresse commence par <code>https://</code> et les fichiers

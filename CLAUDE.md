@@ -28,6 +28,12 @@ la main. Le site sera public sur GitHub Pages.
 5. Exercices : guidé, semi-guidé, libre. Énoncé + résultat attendu + indices/correction dans `<details>`. Vrai code sur la machine et usage de Claude (générer → relire → repérer → corriger).
 6. Quiz : 3 questions, `<fieldset class="question" data-reponse="N">` + `.explication`.
 
+## Schémas
+Un schéma SVG par leçon, écrit directement dans la page : `<figure class="schema"><svg viewBox="0 0 320 …">` +
+`<title>`/`<desc>` (accessibilité) + `<figcaption>`. Classes de `style.css` uniquement (`s-texte`, `s-note`, `s-barre`,
+`s-laterite`, `s-repere`, `s-lien`, `s-filet`), jamais de couleur en dur : le mode sombre suit tout seul. Largeur
+de 320 unités pour rester lisible à 375 px. Ne pas écrire « sombre/clair » dans les légendes (ça s'inverse en mode sombre).
+
 ## Ton et langue
 Français simple, tutoiement, phrases courtes. Expliquer le jargon la première fois qu'il apparaît.
 

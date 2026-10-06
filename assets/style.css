@@ -489,6 +489,61 @@ progress::-moz-progress-bar {
   color: var(--laterite);
 }
 
+/* Schémas : SVG dans la page, couleurs tirées des variables (mode sombre automatique) */
+.schema {
+  margin: 1.5rem 0 2rem;
+}
+.schema svg {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  height: auto;
+  overflow: visible;
+}
+.schema figcaption {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--gris);
+}
+/* Un liseré couleur papier autour du texte : il reste lisible quand une ligne le traverse. */
+.s-texte,
+.s-note {
+  paint-order: stroke;
+  stroke: var(--papier);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.s-texte {
+  fill: var(--encre);
+  font: 600 14px var(--mono);
+  font-variant-ligatures: none;
+}
+.s-note {
+  fill: var(--gris);
+  font: italic 12px var(--texte);
+}
+.s-texte-laterite,
+.s-note-laterite {
+  fill: var(--laterite);
+}
+.s-barre {
+  fill: var(--encre);
+}
+.s-laterite {
+  fill: var(--laterite);
+}
+.s-filet line {
+  stroke: var(--filet);
+}
+.s-repere {
+  stroke: var(--gris);
+  stroke-dasharray: 4 4;
+}
+.s-lien {
+  stroke: var(--laterite);
+  stroke-width: 2;
+}
+
 /* Exercices */
 .exercice + .exercice {
   margin-top: 2.5rem;

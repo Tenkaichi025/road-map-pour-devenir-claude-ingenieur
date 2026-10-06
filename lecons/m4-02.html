@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cadrer un prompt et le contexte · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m4-02">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 4.2</p>
+          <h1>Cadrer un prompt et le contexte</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            L'IA n'est pas télépathe. Tout ce que ton prompt ne dit pas, elle le <strong>décide à ta place</strong> : quelle
+            bibliothèque utiliser, comment arrondir un montant, que faire d'une donnée invalide, combien de fichiers créer.
+            Et elle comble ces vides avec des choix « génériques », souvent plus compliqués que nécessaire, rarement
+            adaptés à ton projet.
+          </p>
+          <p>
+            La qualité du code produit suit donc la clarté de deux choses. Le <strong>périmètre</strong> : ce qu'il faut
+            faire, les règles, les cas limites, ce qui est hors sujet, et comment savoir que c'est fini. Et le
+            <strong>contexte</strong> : les fichiers utiles, les conventions du projet, les commandes de test. Les règles
+            durables vont dans un fichier <code>CLAUDE.md</code>, que Claude Code lit à chaque session. La demande du jour
+            va dans le prompt.
+          </p>
+          <p>
+            Cadrer ne veut pas dire tout dire. Le bon contexte, c'est assez pour comprendre, et rien qui fasse dévier :
+            ni secret, ni données réelles, ni « tout le projet au cas où ».
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Le panier d'une boutique de pagnes, en Node.js : un catalogue, des fonctions pures, des montants en francs CFA
+            entiers, des tests. On veut ajouter des codes promo. Même projet, même besoin, deux prompts.
+          </p>
+
+          <h3>Le prompt flou</h3>
+          <pre><code>Ajoute un système de remise.</code></pre>
+          <p>Voici une réponse typique :</p>
+          <pre><code>package.json                         ← dépendance ajoutée : decimal.js
+config/remises.json                  ← un fichier de configuration
+src/remises/RemiseStrategy.js        ← une classe « abstraite »
+src/remises/RemisePourcentage.js     ← une sous-classe
+src/remises/RemiseMontant.js         ← une autre sous-classe
+src/remises/FabriqueRemise.js        ← une fabrique
+src/promo.js
+tests/promo.test.js                  ← 2 tests, tous verts
+README.md                            ← « pensez à lancer npm install »
+
+return parseFloat(((total * this.config.valeur) / 100).toFixed(2));   ← des centimes de franc CFA</code></pre>
+          <p>
+            Les tests sont verts. Mais face aux cas limites, ce code tombe 4 fois sur 7. Le code tapé en minuscules est
+            ignoré. 10 % de 2 995 F donnent un total de 2 695,5 F. TABASKI5000 s'applique sous le minimum prévu (le
+            minimum est dans la configuration… mais jamais lu). Et un code inconnu est ignoré en silence. L'IA n'a pas
+            « mal travaillé » : elle a répondu à une question floue avec des choix au hasard.
+          </p>
+
+          <h3>Le prompt cadré</h3>
+          <pre><code>Contexte : panier d'une boutique (Node.js, CommonJS, aucune dépendance).
+Lis CLAUDE.md, src/panier.js et tests/panier.test.js avant de commencer.
+
+Objectif : ajouter des codes promo.
+
+Données : crée src/promo.js, qui exporte totalAvecCode(panier, code).
+panier est le tableau de lignes { reference, quantite } de src/panier.js.
+Deux codes, écrits dans ce fichier :
+- BIENVENUE10 : 10 % de remise ;
+- TABASKI5000 : 5 000 F de remise, seulement si le panier fait au moins 30 000 F.
+
+Règles et cas limites :
+- un seul code par panier ; insensible à la casse et aux espaces autour ;
+- montants en francs CFA entiers : le pourcentage est arrondi vers le bas ;
+- code inconnu → erreur « Code promo inconnu. » ;
+- minimum non atteint → erreur qui indique le minimum ;
+- le total ne descend jamais sous 0.
+
+Contraintes : aucune dépendance, aucune classe, ne modifie aucun fichier existant.
+Fini quand : tests/promo.test.js couvre chaque règle et chaque cas limite,
+et « node --test » passe.
+Hors périmètre : stocker les codes en base, l'interface, les dates de validité.
+Si quelque chose n'est pas clair, pose-moi la question avant de coder.</code></pre>
+          <p>
+            Résultat typique : 2 fichiers (<code>src/promo.js</code> d'une vingtaine de lignes, et ses tests), aucune
+            dépendance, des montants entiers, 7 cas limites sur 7. Les sept rubriques à retenir :
+            <strong>contexte, objectif, données, règles et cas limites, contraintes, « fini quand », hors
+            périmètre</strong>. Et une phrase qui change tout : « pose-moi la question si ce n'est pas clair ».
+          </p>
+
+          <h3>Le CLAUDE.md : les règles qui durent</h3>
+          <p>
+            Ce qui vaut pour <em>toutes</em> les demandes ne se répète pas dans chaque prompt : on l'écrit une fois dans le
+            <code>CLAUDE.md</code> à la racine du projet. Claude Code le lit au début de chaque session. Garde-le court
+            (une page) et concret :
+          </p>
+          <pre><code># Panier boutique — règles pour Claude
+
+## Projet
+Panier d'une boutique de pagnes. Node.js 22+, CommonJS (require / module.exports).
+
+## Commandes
+- Tests : node --test. Ils doivent tous passer avant de me rendre la main.
+
+## Conventions
+- Noms en français, verbes à l'infinitif : ajouterAuPanier, totalPanier.
+- Montants en francs CFA, toujours entiers. Jamais toFixed ni parseFloat pour l'argent ;
+  arrondi : Math.floor.
+- Erreurs : throw new Error("Message clair en français.")
+- Fonctions pures, données en paramètre. Pas de classe sans nécessité.
+
+## Limites
+- Aucune dépendance sans mon accord.
+- Ne modifie pas les tests existants ; ajoute un test par règle et par cas limite.
+- Ne touche qu'aux fichiers nécessaires ; annonce-moi la liste avant de commencer.
+
+## Sécurité
+- Aucun secret dans le code : process.env, et .env ignoré par git (leçon 3.3).
+- SQL : requêtes préparées avec « ? » ; liste blanche pour les noms de colonnes (3.1).
+- Affichage : textContent, jamais innerHTML avec des données (3.2).
+- Chaque requête sur une donnée vérifie son propriétaire (3.5).
+
+## Git
+- Branche ia/… ; un commit par étape, messages précis ; jamais de push ni de reset --hard (4.1).</code></pre>
+          <p>
+            Ce qui n'y va pas : la tâche du jour, les secrets, les longues explications. Dans Claude Code, tu peux aussi
+            citer un fichier précis dans ton prompt avec <code>@src/panier.js</code>, et repartir d'une conversation vide
+            avec <code>/clear</code> quand tu changes de sujet : une vieille discussion hors sujet fait dévier autant qu'un
+            prompt flou.
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 296" role="img" aria-labelledby="schema-42-titre schema-42-desc">
+              <title id="schema-42-titre">Ce qu'on donne à l'IA, et ce qu'on garde dehors</title>
+              <desc id="schema-42-desc">
+                À donner à Claude : le CLAUDE.md avec les règles, les fichiers concernés, les tests existants, un exemple
+                d'entrée et de sortie, le message d'erreur exact, et ce qui est hors périmètre. À garder hors de la
+                conversation : le fichier .env et les clés, les vraies données de clients, le dépôt entier par défaut,
+                node_modules et les fichiers générés, les vieux échanges hors sujet. Assez de contexte pour comprendre,
+                rien qui fasse dévier.
+              </desc>
+              <defs>
+                <marker id="fleche-42" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-barre" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <rect class="s-cadre" x="0.75" y="1" width="152" height="164" />
+              <text class="s-ui" x="10" y="22">À donner</text>
+              <text class="s-note" x="10" y="46">CLAUDE.md : les règles</text>
+              <text class="s-note" x="10" y="66">les fichiers concernés</text>
+              <text class="s-note" x="10" y="86">les tests existants</text>
+              <text class="s-note" x="10" y="106">exemple entrée → sortie</text>
+              <text class="s-note" x="10" y="126">le message d'erreur exact</text>
+              <text class="s-note" x="10" y="146">ce qui est hors périmètre</text>
+
+              <rect class="s-boite-contenu" x="168" y="1" width="151" height="164" />
+              <text class="s-ui-laterite" x="178" y="22">À garder dehors</text>
+              <text class="s-note" x="178" y="46">.env, clés, mots de passe</text>
+              <text class="s-note" x="178" y="66">vraies données clients</text>
+              <text class="s-note" x="178" y="86">le dépôt entier, d'office</text>
+              <text class="s-note" x="178" y="106">node_modules, builds</text>
+              <text class="s-note" x="178" y="126">vieux échanges hors sujet</text>
+
+              <line class="s-trait" x1="76" y1="166" x2="76" y2="194" marker-end="url(#fleche-42)" />
+              <rect class="s-cadre" x="20" y="198" width="112" height="40" />
+              <text class="s-ui" x="76" y="223" text-anchor="middle">Claude</text>
+              <text class="s-note s-note-laterite" x="244" y="190" text-anchor="middle">reste hors de la</text>
+              <text class="s-note s-note-laterite" x="244" y="206" text-anchor="middle">conversation</text>
+
+              <g class="s-filet"><line x1="0" y1="256" x2="320" y2="256" /></g>
+              <text class="s-note" x="0" y="276">Assez de contexte pour comprendre,</text>
+              <text class="s-note" x="0" y="292">rien qui fasse dévier.</text>
+            </svg>
+            <figcaption>
+              Ce qui manque à gauche, l'IA l'invente. Ce qui traîne à droite, elle peut le recopier : une clé dans un
+              exemple, une vraie adresse de client dans un test.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Après chaque réponse, surtout quand ta demande était courte :</p>
+          <ul class="liste-verif">
+            <li>Aucune dépendance inventée : compare <code>package.json</code> avant et après. Une dépendance doit répondre à un vrai besoin, que tu as accepté.</li>
+            <li>Pas de sur-ingénierie : des classes, des fabriques, des « stratégies » ou un fichier de configuration pour un besoin qui tient en 20 lignes. « Extensible pour plus tard » n'est pas une raison.</li>
+            <li>Les conventions du <code>CLAUDE.md</code> sont respectées : système de modules, noms, montants, messages d'erreur.</li>
+            <li>Seuls les fichiers attendus ont bougé (<code>git diff --stat</code>, leçon 4.1). Un README « amélioré » ou une instruction inventée (« lancez npm install ») sont des signaux.</li>
+            <li>Chaque règle et chaque cas limite de ta demande a son test. Et vérifie le comportement réel, pas seulement que les tests sont verts.</li>
+            <li>Quand ta demande était ambiguë, l'IA a-t-elle posé une question, ou a-t-elle tranché seule ? Repère chaque décision qu'elle a prise à ta place.</li>
+            <li>Aucun secret ni aucune donnée réelle n'a été recopié dans le code, les tests ou les exemples.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Ce que le prompt ne dit pas, l'IA le décide à ta place, souvent en plus compliqué.</li>
+            <li>Un prompt cadré : contexte, objectif, données, règles et cas limites, contraintes, « fini quand », hors périmètre.</li>
+            <li>Les règles durables (commandes, conventions, limites, sécurité) vont dans <code>CLAUDE.md</code>, court et concret.</li>
+            <li>Le bon contexte : assez pour comprendre, rien qui fasse dévier. Jamais de secret ni de vraie donnée.</li>
+            <li>Après la réponse : dépendances, fichiers touchés, conventions, et chaque cas limite vérifié.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>Les fichiers sont dans <code>exercices/m4-02/</code> :</p>
+          <ul>
+            <li><code>node preparer-exercice.js &lt;dossier&gt;</code> crée le dépôt d'entraînement (hors du cours) : <code>main</code> avec le tag <code>avant-ia</code>, et deux branches, <code>ia/prompt-flou</code> et <code>ia/prompt-cadre</code>.</li>
+            <li><code>node controle-ia.js &lt;dépôt&gt; avant-ia</code> contrôle la branche sur laquelle tu te trouves : dépendances, fichiers, volume, sur-ingénierie, conventions, tests existants, résultat des tests.</li>
+            <li><code>node essais-limites.js &lt;dépôt&gt;</code> soumet le <code>totalAvecCode</code> de la branche aux 7 cas limites.</li>
+          </ul>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Comparer les deux réponses</h3>
+            <ol>
+              <li>Depuis <code>exercices/m4-02</code> : <code>node preparer-exercice.js C:\exos\panier</code>.</li>
+              <li><code>git -C C:\exos\panier switch ia/prompt-flou</code>, puis lance <code>controle-ia.js</code> et <code>essais-limites.js</code> sur <code>C:\exos\panier</code>.</li>
+              <li>Fais la même chose sur <code>ia/prompt-cadre</code>.</li>
+              <li>Lis <code>src/promo.js</code> et <code>src/remises/</code> de la branche floue. Fais la liste de chaque <strong>décision que l'IA a prise seule</strong>, faute d'indication dans le prompt.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> branche floue, 7 points d'alerte et 3 cas limites sur 7 ; branche cadrée,
+              aucun point et 7 sur 7 ; et une liste d'au moins 5 décisions prises à ta place.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Pour chaque cas limite raté, demande-toi : « mon prompt flou disait-il quelque chose là-dessus ? »</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Les décisions prises à ta place par la réponse floue :</p>
+              <ul>
+                <li>quels codes, et quelles valeurs (rangés dans un fichier de configuration) ;</li>
+                <li>une architecture à 4 classes, « extensible » ;</li>
+                <li>une bibliothèque de calcul (<code>decimal.js</code>), déclarée mais même pas utilisée ;</li>
+                <li>des montants à 2 décimales, en francs CFA ;</li>
+                <li>la casse du code compte ;</li>
+                <li>un code inconnu est ignoré, sans erreur ;</li>
+                <li>le minimum de TABASKI5000 est écrit, mais jamais vérifié ;</li>
+                <li>le README est réécrit.</li>
+              </ul>
+              <p>
+                Les deux branches ont des tests verts. Seuls la liste des fichiers, les conventions et les cas limites font
+                la différence. Remarque : la branche cadrée ajoute 55 lignes contre 95, mais surtout plus de tests. Le
+                nombre de lignes n'est qu'un indice, ce qui compte est ce qu'elles font.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Ton CLAUDE.md et ton prompt cadré</h3>
+            <ol>
+              <li>Sur <code>main</code>, crée le <code>CLAUDE.md</code> du projet (inspire-toi de celui de la leçon) et commite-le. Puis <code>git tag avant-mon-prompt</code> et <code>git switch -c ia/code-plafonne</code>.</li>
+              <li>
+                Écris un prompt cadré, avec les sept rubriques, pour un nouveau code : <code>MEGA20</code>, 20 % de
+                remise, plafonnée à 10 000 F. Prévois toi-même les cas limites.
+              </li>
+              <li>Donne-le à Claude Code, dans ce dépôt.</li>
+              <li><code>node controle-ia.js C:\exos\panier avant-mon-prompt</code>, puis vérifie tes cas limites à la main.</li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un <code>CLAUDE.md</code> d'une page, un prompt avec ses sept rubriques,
+              un contrôle sans alerte (ou chaque alerte expliquée), et tes cas limites respectés.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>Cas limites à prévoir pour un plafond : juste en dessous (40 000 F → 8 000 F de remise), pile au plafond (50 000 F → 10 000 F), au-dessus (80 000 F → toujours 10 000 F), un montant qui donne des centimes, et la casse du code.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>Un extrait de prompt correct :</p>
+              <pre><code>Objectif : ajouter le code MEGA20 dans src/promo.js, sans changer
+le comportement des codes existants.
+Règle : 20 % de remise, arrondi vers le bas, plafonnée à 10 000 F.
+Cas limites (un test chacun) : 40 000 F → 32 000 F ; 50 000 F →
+40 000 F ; 80 000 F → 70 000 F ; « mega20 » accepté ; 2 995 F → 2 396 F.
+Contraintes : ne modifie que src/promo.js et tests/promo.test.js ;
+aucun test existant modifié.
+Fini quand : node --test passe.</code></pre>
+              <p>
+                Si le contrôle signale un test existant modifié, ou un autre fichier touché, refuse et rappelle la
+                contrainte. Et vérifie un calcul toi-même : 20 % de 2 995 F = 599 F, donc un total de 2 396 F.
+              </p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Le CLAUDE.md de ton projet, et un prompt de refactoring</h3>
+            <p>
+              Écris le <code>CLAUDE.md</code> d'un de tes projets (par exemple Royal Senteur) : commandes, conventions
+              réelles (regarde le code existant), limites, sécurité, Git. Puis écris un prompt de
+              <strong>refactoring</strong> : réorganiser du code <strong>sans changer son comportement</strong>.
+              Applique-le sur une branche, et contrôle le résultat.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> un <code>CLAUDE.md</code> fidèle au projet, un prompt de refactoring, et
+              la preuve que le comportement n'a pas changé (tests inchangés et verts, <code>git diff --stat</code> limité aux fichiers prévus).
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Un prompt de refactoring contient toujours : « ne change aucun comportement », « les tests existants ne sont pas modifiés et restent verts », et la liste des fichiers autorisés.</li>
+                <li>Pas de tests sur la partie à refactorer ? Demande d'abord à Claude d'en écrire, vérifie-les, commite-les, et seulement ensuite lance le refactoring.</li>
+                <li>Adapte la liste <code>CONVENTIONS</code> de <code>controle-ia.js</code> aux règles de ton projet : tu as ton propre contrôle automatique.</li>
+              </ul>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Au prompt « Ajoute un système de remise », l'IA répond avec une nouvelle dépendance et quatre classes. Pourquoi ?</legend>
+            <label><input type="radio" name="q1" /> Parce que l'IA est mauvaise en JavaScript.</label>
+            <label><input type="radio" name="q1" /> Parce que le prompt ne disait rien du projet ni des limites : elle a comblé le vide avec des choix génériques.</label>
+            <label><input type="radio" name="q1" /> Parce que c'est la bonne façon de faire une remise.</label>
+            <p class="explication" hidden>
+              Sans conventions, ni contraintes, ni cas limites, l'IA décide seule. Elle choisit souvent la solution la plus
+              « générale » possible. Le prompt cadré et le <code>CLAUDE.md</code> lui donnent les réponses qu'elle aurait
+              dû inventer.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. Qu'est-ce qui a sa place dans le <code>CLAUDE.md</code> d'un projet ?</legend>
+            <label><input type="radio" name="q2" /> La description détaillée de la tâche du jour.</label>
+            <label><input type="radio" name="q2" /> Les clés d'API, pour que Claude puisse tester.</label>
+            <label><input type="radio" name="q2" /> Les règles durables : commandes de test, conventions, limites, sécurité, Git.</label>
+            <p class="explication" hidden>
+              Le <code>CLAUDE.md</code> est lu à chaque session : il contient ce qui vaut pour toutes les demandes. La
+              tâche du jour va dans le prompt. Et les secrets ne vont nulle part dans la conversation.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. Que doit absolument contenir un prompt de refactoring ?</legend>
+            <label><input type="radio" name="q3" /> « Ne change aucun comportement ; les tests existants ne sont pas modifiés et restent verts », et les fichiers autorisés.</label>
+            <label><input type="radio" name="q3" /> « Améliore le code comme tu veux. »</label>
+            <label><input type="radio" name="q3" /> La liste des bibliothèques modernes à utiliser.</label>
+            <p class="explication" hidden>
+              Un refactoring réorganise le code sans changer ce qu'il fait. Les tests existants, inchangés, sont la preuve
+              que rien n'a bougé. Si l'IA les modifie, cette preuve disparaît.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

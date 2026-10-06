@@ -104,4 +104,8 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
   du cours : projet devis/livraison (tests `node --test`), branche `ia/remise-fidelite` avec un commit fourre-tout qui
   change l'arrondi de la livraison ET l'attendu du test (6/6 verts), travail en cours non commité dans le README (stash).
   Déroulé complet testé (stash, diff --stat, restore --source, merge, stash pop, reset --hard).
-- Ensuite : leçon 4.2 (cadrer un prompt et le contexte).
+- Leçon 4.2 (cadrer un prompt) rédigée. `exercices/m4-02/` : `preparer-exercice.js` (panier de boutique, tag avant-ia,
+  branches simulées `ia/prompt-flou` — decimal.js, 4 classes, toFixed, 5 tests verts, 3/7 cas limites — et
+  `ia/prompt-cadre` — 2 fichiers, 10 tests, 7/7), `controle-ia.js` (dépendances, fichiers, volume, sur-ingénierie,
+  conventions, tests modifiés, node --test), `essais-limites.js` (7 cas limites).
+- Ensuite : leçon 4.3 (découper les tâches).

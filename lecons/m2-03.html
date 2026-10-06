@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Conserver les données avec SQLite · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="m2-03">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Leçon 2.3</p>
+          <h1>Conserver les données avec SQLite</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>
+            En 2.1, les réservations disparaissaient à chaque redémarrage du serveur. Elles vivaient dans la
+            <strong>mémoire</strong> du programme, et cette mémoire est effacée dès qu'il s'arrête. Pour garder des
+            données, il faut les écrire dans un <strong>fichier</strong>. Une base de données, c'est un fichier
+            organisé pour ça.
+          </p>
+          <p>
+            Avec <strong>SQLite</strong>, toute la base tient dans un seul fichier, par exemple <code>blog.db</code>.
+            À l'intérieur, des <strong>tables</strong> : des tableaux avec des colonnes fixes et une ligne par élément.
+            On leur parle dans un langage dédié, le <strong>SQL</strong>, avec quatre verbes : <code>INSERT</code>
+            (créer), <code>SELECT</code> (lire), <code>UPDATE</code> (modifier), <code>DELETE</code> (supprimer).
+          </p>
+          <p>
+            Le grand danger : coller une valeur venue d'un visiteur directement dans le texte d'une requête SQL. Le
+            visiteur peut alors écrire du SQL à ta place. C'est l'<strong>injection SQL</strong>. La protection tient
+            en une règle : les <strong>requêtes préparées</strong>. Le SQL contient des <code>?</code>, et les valeurs
+            voyagent à part.
+          </p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>
+            Un blog de bonnes adresses : des articles, et des commentaires sous chaque article. Certains articles sont
+            des brouillons qui ne doivent jamais être visibles. Le serveur utilise <code>node:sqlite</code>, fourni
+            avec Node (version 22.5 ou plus) : rien à installer.
+          </p>
+          <h3>Ouvrir la base et créer les tables</h3>
+          <pre><code>const { DatabaseSync } = require("node:sqlite");
+const db = new DatabaseSync("blog.db");     // le fichier est créé s'il n'existe pas
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS articles (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    titre   TEXT    NOT NULL,
+    contenu TEXT    NOT NULL,
+    publie  INTEGER NOT NULL DEFAULT 0          -- 0 = brouillon, 1 = publié
+  );
+  CREATE TABLE IF NOT EXISTS commentaires (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+    auteur     TEXT    NOT NULL,
+    texte      TEXT    NOT NULL
+  );
+`);</code></pre>
+          <ul>
+            <li><code>PRIMARY KEY AUTOINCREMENT</code> : la base numérote elle-même chaque ligne.</li>
+            <li><code>NOT NULL</code> : ce champ est obligatoire. La base refuse une ligne sans lui.</li>
+            <li>
+              <code>REFERENCES articles(id)</code> : c'est une <strong>clé étrangère</strong>. Chaque commentaire
+              pointe vers un article qui existe vraiment. <code>ON DELETE CASCADE</code> : quand on supprime un
+              article, ses commentaires partent avec lui.
+            </li>
+          </ul>
+
+          <h3>Les quatre verbes, face aux routes de l'API</h3>
+          <div class="tableau">
+            <table>
+              <thead>
+                <tr><th>SQL</th><th>Rôle</th><th>Route REST</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>INSERT INTO articles (titre, …) VALUES (?, …)</code></td><td>Créer</td><td><code>POST</code></td></tr>
+                <tr><td><code>SELECT id, titre FROM articles WHERE publie = 1</code></td><td>Lire</td><td><code>GET</code></td></tr>
+                <tr><td><code>UPDATE articles SET titre = ? WHERE id = ?</code></td><td>Modifier</td><td><code>PUT</code></td></tr>
+                <tr><td><code>DELETE FROM articles WHERE id = ?</code></td><td>Supprimer</td><td><code>DELETE</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Attention : un <code>UPDATE</code> ou un <code>DELETE</code> sans <code>WHERE</code> touche <strong>toutes</strong> les lignes de la table.</p>
+
+          <h3>Des requêtes préparées</h3>
+          <p>Dans le serveur, chaque requête est préparée une fois, avec des <code>?</code> à la place des valeurs :</p>
+          <pre><code>const sql = {
+  articlePublie: db.prepare("SELECT id, titre, contenu FROM articles WHERE id = ? AND publie = 1"),
+  supprimerArticle: db.prepare("DELETE FROM articles WHERE id = ?"),
+};
+
+const article = sql.articlePublie.get(id);    // une ligne, ou undefined si elle n'existe pas
+if (!article) return repondre(res, 404, { erreur: "Article introuvable." });
+
+const { changes } = sql.supprimerArticle.run(id);   // changes = nombre de lignes supprimées
+if (changes === 0) return repondre(res, 404, { erreur: "Article introuvable." });</code></pre>
+
+          <h3>L'injection SQL, en vrai</h3>
+          <p>Une recherche dans les titres, écrite comme l'IA le fait trop souvent :</p>
+          <pre><code>// DANGER : la valeur q est collée dans le texte SQL
+db.prepare(`SELECT id, titre FROM articles WHERE publie = 1 AND titre LIKE '%${q}%'`).all();</code></pre>
+          <p>Un visiteur cherche <code>%' OR 1=1 --</code>. Le serveur exécute alors :</p>
+          <pre><code>SELECT id, titre FROM articles WHERE publie = 1 AND titre LIKE '%%' OR 1=1 --%'</code></pre>
+          <p>
+            L'apostrophe a fermé le texte, <code>OR 1=1</code> est vrai pour toutes les lignes, et <code>--</code>
+            transforme la fin en commentaire. Résultat : <strong>les brouillons confidentiels apparaissent</strong>. Et
+            un visiteur honnête qui cherche « l'attiéké » fait planter le serveur, à cause de son apostrophe. La
+            version correcte :
+          </p>
+          <pre><code>// La valeur voyage à part : quoi qu'elle contienne, elle reste une valeur
+db.prepare("SELECT id, titre FROM articles WHERE publie = 1 AND titre LIKE ?").all(`%${q}%`);</code></pre>
+          <p>
+            Remarque : <code>prepare</code> ne protège <strong>rien</strong> si le SQL est déjà collé avant. Ce qui
+            protège, c'est le <code>?</code>. Le module 3 (leçon 3.1) va plus loin sur les attaques.
+          </p>
+
+          <h3>Ouvrir une fois, fermer à la fin</h3>
+          <pre><code>const db = new DatabaseSync("blog.db");     // au démarrage, une seule fois
+
+process.on("SIGINT", () =&gt; {                 // Ctrl + C
+  db.close();                                // on ferme proprement avant de quitter
+  process.exit(0);
+});</code></pre>
+          <p>
+            Ouvrir la base à chaque requête, c'est au mieux du travail inutile (ouvrir le fichier, relire sa
+            structure) répété à chaque visiteur. Au pire, si on ne la ferme jamais, des connexions restent ouvertes et
+            s'accumulent sur un serveur très sollicité. La règle est simple : une connexion, ouverte au démarrage,
+            fermée à l'arrêt.
+          </p>
+
+          <figure class="schema">
+            <svg viewBox="0 0 320 342" role="img" aria-labelledby="schema-23-titre schema-23-desc">
+              <title id="schema-23-titre">Deux tables liées, et deux façons d'écrire une requête</title>
+              <desc id="schema-23-desc">
+                Le fichier blog.db contient deux tables. La table articles a les colonnes id, titre, contenu et publie.
+                La table commentaires a les colonnes id, article_id, auteur et texte. article_id pointe vers l'id d'un
+                article : c'est une clé étrangère. En dessous, une requête où la valeur q est collée dans le SQL : avec
+                q égal à « %' OR 1=1 -- », q devient du SQL et les brouillons sortent. Puis une requête préparée avec
+                un point d'interrogation : q reste une simple valeur.
+              </desc>
+              <defs>
+                <marker id="fleche-23" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                  <path class="s-laterite" d="M0,0 L8,4 L0,8 z" />
+                </marker>
+              </defs>
+
+              <text class="s-note" x="0" y="14">blog.db : un fichier, deux tables liées</text>
+
+              <rect class="s-cadre" x="0.75" y="26" width="130" height="108" />
+              <text class="s-ui" x="10" y="46">articles</text>
+              <line class="s-trait" x1="0.75" y1="54" x2="130.75" y2="54" />
+              <text class="s-code s-code-laterite" x="10" y="72">id</text>
+              <text class="s-code" x="10" y="90">titre</text>
+              <text class="s-code" x="10" y="108">contenu</text>
+              <text class="s-code" x="10" y="126">publie</text>
+
+              <rect class="s-cadre" x="189" y="26" width="130" height="108" />
+              <text class="s-ui" x="199" y="46">commentaires</text>
+              <line class="s-trait" x1="189" y1="54" x2="319" y2="54" />
+              <text class="s-code" x="199" y="72">id</text>
+              <text class="s-code s-code-laterite" x="199" y="90">article_id</text>
+              <text class="s-code" x="199" y="108">auteur</text>
+              <text class="s-code" x="199" y="126">texte</text>
+
+              <path class="s-lien" d="M196 86 H160 V68 H32" marker-end="url(#fleche-23)" />
+
+              <text class="s-note" x="160" y="154" text-anchor="middle">article_id pointe vers l'id d'un article :</text>
+              <text class="s-note" x="160" y="170" text-anchor="middle">la base vérifie que cet article existe.</text>
+
+              <g class="s-filet"><line x1="0" y1="186" x2="320" y2="186" /></g>
+
+              <text class="s-ui-laterite" x="0" y="208">Valeur collée dans le SQL</text>
+              <text class="s-code" x="0" y="230">"… LIKE '%" + q + "%'"</text>
+              <text class="s-note" x="0" y="250">avec q = %' OR 1=1 --  →  q devient du SQL :</text>
+              <text class="s-note s-note-laterite" x="0" y="266">les brouillons sortent, une apostrophe fait planter.</text>
+
+              <text class="s-ui" x="0" y="292">Requête préparée</text>
+              <text class="s-code" x="0" y="314">prepare("… LIKE ?").all("%" + q + "%")</text>
+              <text class="s-note" x="0" y="334">→ q reste une simple valeur, quoi qu'elle contienne.</text>
+            </svg>
+            <figcaption>
+              En haut, la clé étrangère qui relie un commentaire à son article. En bas, la seule différence entre une
+              requête vulnérable et une requête sûre : où se trouve la valeur.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Quand l'IA écrit du code qui parle à une base de données :</p>
+          <ul class="liste-verif">
+            <li>
+              Aucune valeur venue de l'extérieur (adresse, formulaire, JSON) n'est collée dans une chaîne SQL. Cherche
+              <code>${</code> et <code>+</code> à l'intérieur des requêtes : tout doit passer par des <code>?</code>.
+            </li>
+            <li>Test : une apostrophe dans un texte (« l'attiéké ») ne fait rien planter, et <code>%' OR 1=1 --</code> ne renvoie rien de plus.</li>
+            <li>La base est ouverte <strong>une fois</strong> au démarrage, et fermée à l'arrêt. Jamais un <code>new DatabaseSync(…)</code> dans une route, appelé à chaque requête.</li>
+            <li>
+              Les contraintes restent actives. Si l'IA écrit <code>enableForeignKeyConstraints: false</code> ou
+              <code>PRAGMA foreign_keys = OFF</code> pour « régler » une erreur, refuse : la base signalait un vrai
+              problème.
+            </li>
+            <li>Les colonnes obligatoires ont <code>NOT NULL</code>, et les liens ont <code>REFERENCES</code>.</li>
+            <li>Une lecture par id gère l'absence (<code>get()</code> renvoie <code>undefined</code> → 404). Un <code>DELETE</code> vérifie <code>changes</code>. Et aucun <code>UPDATE</code> ou <code>DELETE</code> n'existe sans <code>WHERE</code>.</li>
+            <li>Les données privées (brouillons) sont filtrées <strong>dans la requête SQL</strong>, pas seulement par la page.</li>
+            <li>Le fichier <code>.db</code> n'est pas commité dans git : il contient de vraies données.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>En mémoire, tout disparaît au redémarrage. Dans une base, les données vivent dans un fichier.</li>
+            <li>Une base contient des tables, liées par des clés : <code>article_id</code> pointe vers <code>articles.id</code>.</li>
+            <li>Quatre verbes : <code>INSERT</code>, <code>SELECT</code>, <code>UPDATE</code>, <code>DELETE</code>. Jamais les deux derniers sans <code>WHERE</code>.</li>
+            <li>Jamais de valeur collée dans le SQL : une requête préparée, avec des <code>?</code>.</li>
+            <li>Une connexion ouverte au démarrage, fermée à l'arrêt. Et des contraintes qu'on ne désactive jamais.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+          <p>
+            Les fichiers sont dans <code>exercices/m2-03/</code>. L'outil <code>sql.js</code> te permet d'envoyer une
+            requête SQL à la base, sans rien installer : <code>node sql.js "TA REQUÊTE"</code>. Le fichier
+            <code>blog.db</code> est créé automatiquement au premier lancement, avec quelques données de départ.
+          </p>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Parler SQL à la base du blog</h3>
+            <ol>
+              <li>Ouvre un terminal dans <code>exercices/m2-03/blog</code>, puis lis les articles :</li>
+            </ol>
+            <pre><code>node sql.js "SELECT id, titre, publie FROM articles"</code></pre>
+            <ol start="2">
+              <li>Lis les commentaires avec le titre de leur article. <code>JOIN</code> relie les deux tables grâce à la clé :</li>
+            </ol>
+            <pre><code>node sql.js "SELECT a.titre, c.auteur, c.texte FROM commentaires c JOIN articles a ON a.id = c.article_id"</code></pre>
+            <ol start="3">
+              <li>Ajoute un commentaire, modifie un titre, puis relis :</li>
+            </ol>
+            <pre><code>node sql.js "INSERT INTO commentaires (article_id, auteur, texte) VALUES (2, 'Yao', 'Adresse validée')"
+node sql.js "UPDATE articles SET titre = 'Les maquis de Yopougon' WHERE id = 2"</code></pre>
+            <ol start="4">
+              <li>Essaie d'ajouter un commentaire à un article qui n'existe pas :</li>
+            </ol>
+            <pre><code>node sql.js "INSERT INTO commentaires (article_id, auteur, texte) VALUES (999, 'Yao', 'Test')"</code></pre>
+            <ol start="5">
+              <li>
+                Lance le serveur (<code>node serveur.js</code>). Depuis <code>exercices/m2-03/requetes</code>, crée un
+                article :
+                <code>curl.exe -si -X POST http://localhost:3004/api/articles -H "Content-Type: application/json" --data "@nouvel-article.json"</code>.
+              </li>
+              <li>Arrête le serveur (<kbd>Ctrl</kbd> + <kbd>C</kbd>), relance-le, puis ouvre <code>http://localhost:3004/api/articles</code>.</li>
+              <li>
+                Supprime l'article n°1 : <code>curl.exe -si -X DELETE http://localhost:3004/api/articles/1</code>. Puis
+                cherche ses commentaires avec <code>sql.js</code> : <code>SELECT * FROM commentaires WHERE article_id = 1</code>.
+              </li>
+            </ol>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> les trois articles, dont un brouillon (<code>publie</code> = 0). La
+              base refuse le commentaire sur l'article 999. Ton article est toujours là après le redémarrage. Les
+              commentaires de l'article 1 ont disparu avec lui.
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p>En SQL, le texte s'écrit entre apostrophes simples : <code>'Yao'</code>. Pour mettre une apostrophe dans un texte, on la double : <code>'l''attiéké'</code>.</p>
+              <p>Pour repartir des données de départ, arrête le serveur et supprime le fichier <code>blog.db</code> : il sera recréé au prochain lancement.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ul>
+                <li>Le <code>JOIN</code> affiche 3 commentaires, chacun avec le titre de son article.</li>
+                <li>L'<code>INSERT</code> et l'<code>UPDATE</code> affichent « 1 ligne(s) modifiée(s) ».</li>
+                <li>Le commentaire sur l'article 999 donne <code>Erreur SQL : FOREIGN KEY constraint failed</code>. C'est la clé étrangère qui protège tes données. <code>node:sqlite</code> active ce contrôle par défaut.</li>
+                <li>Après le redémarrage, l'article « Le garba du vendredi » est toujours là : il est écrit dans <code>blog.db</code>. C'est la différence avec la leçon 2.1.</li>
+                <li>Après le <code>DELETE</code> (code 204), la requête ne renvoie aucun commentaire : <code>ON DELETE CASCADE</code> les a supprimés avec l'article.</li>
+              </ul>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Faire ajouter une recherche par Claude, puis l'attaquer</h3>
+            <ol>
+              <li>Copie le dossier <code>blog</code> dans un dossier de travail. Dans la copie, demande à Claude :</li>
+            </ol>
+            <pre><code>Dans serveur.js, ajoute une route GET /api/recherche?q=... qui
+renvoie les articles publiés dont le titre contient q.</code></pre>
+            <ol start="2">
+              <li>Lis le code ajouté : comment la valeur <code>q</code> arrive-t-elle dans la requête SQL ?</li>
+              <li>Lance le serveur et teste ces recherches, depuis le dossier <code>requetes</code> :</li>
+            </ol>
+            <pre><code>curl.exe -s --get http://localhost:3004/api/recherche --data-urlencode "q=maquis"
+curl.exe -s --get http://localhost:3004/api/recherche --data-urlencode "q=l'atti"
+curl.exe -s --get http://localhost:3004/api/recherche --data-urlencode "q=%' OR 1=1 --"</code></pre>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> « maquis » trouve 1 article, « l'atti » trouve 1 article sans faire
+              planter le serveur, et l'attaque ne renvoie <strong>aucun</strong> article (et surtout pas le
+              brouillon).
+            </p>
+            <details>
+              <summary>Indices</summary>
+              <p><code>--data-urlencode</code> encode les caractères spéciaux (espaces, <code>%</code>, apostrophes) pour qu'ils voyagent correctement dans l'adresse.</p>
+              <p>Si le serveur s'arrête après « l'atti », regarde le terminal : le message <code>syntax error</code> signe une valeur collée dans le SQL.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>La bonne version utilise un <code>?</code>, et place les <code>%</code> dans la valeur :</p>
+              <pre><code>const q = searchParams.get("q") || "";
+const resultats = db
+  .prepare("SELECT id, titre FROM articles WHERE publie = 1 AND titre LIKE ? ORDER BY id")
+  .all(`%${q}%`);</code></pre>
+              <p>
+                Si Claude a écrit <code>LIKE '%${q}%'</code> dans la requête, le brouillon confidentiel sort avec
+                l'attaque. Demande alors :
+              </p>
+              <pre><code>La route /api/recherche colle q dans le SQL : c'est une injection
+SQL. Utilise une requête préparée avec un « ? » et passe la valeur
+en paramètre. Ne change rien d'autre.</code></pre>
+              <p>Vérifie aussi que Claude n'a pas ouvert une deuxième connexion à la base dans la route.</p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Le blog « amélioré »</h3>
+            <p>
+              <code>exercices/m2-03/blog-bugge/</code> est une version du blog modifiée par une IA, sur le port
+              <strong>3005</strong>. Elle a ajouté une recherche, et « corrigé » des erreurs de base de données. Trouve
+              <strong>au moins 4 problèmes</strong>. Pour chacun, apporte une preuve : une requête <code>curl.exe</code>,
+              une requête <code>node sql.js</code>, ou la ligne de code fautive. Puis corrige.
+            </p>
+            <p class="attendu">
+              <strong>Résultat attendu :</strong> 4 problèmes prouvés et corrigés. L'attaque ne montre plus le
+              brouillon, et aucune donnée orpheline n'est créée.
+            </p>
+            <details>
+              <summary>Pistes</summary>
+              <ul>
+                <li>Passe la liste « Vérifier le travail de l'IA » sur <code>serveur.js</code> et <code>base.js</code>.</li>
+                <li>
+                  Un commentaire « orphelin », c'est un commentaire dont l'article n'existe plus. Pour les trouver :
+                  <code>node sql.js "SELECT c.id, c.article_id FROM commentaires c LEFT JOIN articles a ON a.id = c.article_id WHERE a.id IS NULL"</code>.
+                </li>
+                <li>Un des problèmes ne se voit dans aucun test rapide : il faut lire le code.</li>
+              </ul>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <ol>
+                <li>
+                  <strong>Injection SQL</strong> dans <code>/api/recherche</code> : <code>LIKE '%${q}%'</code>. L'attaque
+                  affiche le brouillon « nos tarifs 2026 (confidentiel) », et « l'atti » fait planter le serveur
+                  (<code>near "atti": syntax error</code>). Correction : un <code>?</code> (voir exercice 2).
+                </li>
+                <li>
+                  <strong>Clés étrangères désactivées</strong> dans <code>base.js</code> :
+                  <code>enableForeignKeyConstraints: false</code>, « pour éviter les erreurs ». Conséquence : supprimer
+                  l'article 1 laisse ses commentaires orphelins, et <code>ON DELETE CASCADE</code> ne fonctionne plus.
+                  Correction : retirer l'option.
+                </li>
+                <li>
+                  <strong>Commentaire sur un article inexistant</strong> : <code>POST /api/articles/999/commentaires</code>
+                  répond <code>201</code> et crée un orphelin. La vérification « article introuvable → 404 » a disparu.
+                  Correction : la remettre, en plus de la clé étrangère.
+                </li>
+                <li>
+                  <strong>Une connexion par requête, jamais fermée</strong> : <code>const db = ouvrir();</code> au début
+                  du traitement de chaque requête, sans <code>db.close()</code>. Et la fermeture propre au
+                  <kbd>Ctrl</kbd> + <kbd>C</kbd> a disparu. Aucun test rapide ne le montre : c'est du travail répété à chaque
+                  requête, et des connexions laissées ouvertes. Correction : ouvrir une fois au démarrage et fermer à
+                  l'arrêt, comme dans <code>blog/</code>.
+                </li>
+              </ol>
+              <p>
+                Le point 2 est typique : face à une erreur, l'IA choisit parfois de faire taire l'alarme plutôt que de
+                chercher la cause. Une erreur de contrainte est presque toujours une bonne nouvelle : la base vient de
+                t'empêcher d'enregistrer des données incohérentes.
+              </p>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <fieldset class="question" data-reponse="2">
+            <legend>1. Pourquoi les réservations de la leçon 2.1 disparaissaient-elles au redémarrage du serveur ?</legend>
+            <label><input type="radio" name="q1" /> À cause d'un bug de Node.js.</label>
+            <label><input type="radio" name="q1" /> Elles étaient gardées dans la mémoire du programme, effacée quand il s'arrête.</label>
+            <label><input type="radio" name="q1" /> Le navigateur les supprimait en fermant l'onglet.</label>
+            <p class="explication" hidden>
+              Une variable JavaScript vit dans la mémoire du programme. Quand le programme s'arrête, cette mémoire est
+              libérée. Pour garder des données, il faut les écrire dans un fichier : une base de données.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="3">
+            <legend>2. L'IA écrit : <code>db.prepare(`SELECT * FROM articles WHERE titre = '${titre}'`).get()</code>. Est-ce protégé contre l'injection ?</legend>
+            <label><input type="radio" name="q2" /> Oui, parce qu'elle utilise <code>prepare</code>.</label>
+            <label><input type="radio" name="q2" /> Oui, si le titre vient d'un formulaire avec <code>required</code>.</label>
+            <label><input type="radio" name="q2" /> Non : la valeur est collée dans le SQL avant <code>prepare</code>. Il faut <code>titre = ?</code> et <code>.get(titre)</code>.</label>
+            <p class="explication" hidden>
+              <code>prepare</code> ne voit que le texte final, où la valeur est déjà mélangée au SQL. Ce qui protège,
+              c'est le <code>?</code> : la valeur arrive séparément, et la base ne la lit jamais comme du SQL.
+            </p>
+          </fieldset>
+
+          <fieldset class="question" data-reponse="1">
+            <legend>3. Face à l'erreur <code>FOREIGN KEY constraint failed</code>, l'IA ajoute <code>enableForeignKeyConstraints: false</code>. Bonne idée ?</legend>
+            <label><input type="radio" name="q3" /> Non : la base signalait un vrai problème (un lien vers un élément qui n'existe pas). Il faut trouver et corriger la cause.</label>
+            <label><input type="radio" name="q3" /> Oui, puisque l'erreur a disparu.</label>
+            <label><input type="radio" name="q3" /> Oui, à condition de redémarrer le serveur.</label>
+            <p class="explication" hidden>
+              La contrainte est une alarme. La couper ne règle rien : les données incohérentes (commentaires orphelins,
+              liens cassés) s'accumulent en silence, et tu le découvres bien plus tard.
+            </p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

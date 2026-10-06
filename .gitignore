@@ -1,2 +1,5 @@
 # Secrets : ne jamais versionner
 .env
+
+# Bases SQLite des exercices (recréées automatiquement au lancement)
+*.db

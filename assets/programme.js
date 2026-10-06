@@ -21,7 +21,7 @@ const PROGRAMME = [
     lecons: [
       { id: "m2-01", titre: "Le cycle requête-réponse", pret: true },
       { id: "m2-02", titre: "Une API REST et le JSON", pret: true },
-      { id: "m2-03", titre: "La base de données", pret: false },
+      { id: "m2-03", titre: "Conserver les données avec SQLite", pret: true },
       { id: "m2-04", titre: "L'authentification, comment ça marche", pret: false },
     ],
   },

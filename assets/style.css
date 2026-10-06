@@ -539,6 +539,7 @@ progress::-moz-progress-bar {
   stroke-dasharray: 4 4;
 }
 .s-lien {
+  fill: none;
   stroke: var(--laterite);
   stroke-width: 2;
 }

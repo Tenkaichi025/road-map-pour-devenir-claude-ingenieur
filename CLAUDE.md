@@ -18,6 +18,9 @@ la main. Le site sera public sur GitHub Pages.
 - `exercices/<id>/` : fichiers de départ des exercices. **Beaucoup contiennent des bugs VOLONTAIRES** (décrits dans
   les corrections des leçons, avec numéros de ligne) : ne jamais les corriger, et revérifier les numéros de ligne cités
   si un fichier d'exercice est modifié.
+- Exercices back-end : Node.js sans dépendance (`node:http`, `node:sqlite`), un port par serveur (3000 à 3005…),
+  corps JSON envoyés depuis des fichiers (`curl.exe --data "@fichier.json"`, piège des guillemets PowerShell).
+  Les fichiers `*.db` sont ignorés par git (recréés au lancement).
 - `.nojekyll` : obligatoire, sinon GitHub Pages ignore les fichiers commençant par `_`.
 
 ## Structure d'une leçon (ordre obligatoire)

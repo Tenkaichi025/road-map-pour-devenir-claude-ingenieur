@@ -37,6 +37,9 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - Vidéos (Remotion + voix ElevenLabs puis edge-tts) testées puis abandonnées : trop lourdes à gérer. Le site se suffit.
 - PowerShell : `curl` est un alias d'Invoke-WebRequest et les guillemets JSON sautent → toujours `curl.exe`, corps
   JSON lu depuis un fichier (`--data "@fichier.json"`).
+- `node:sqlite` active les clés étrangères PAR DÉFAUT (contrairement au SQLite classique) : le bug réaliste n'est
+  pas l'oubli du PRAGMA, mais `enableForeignKeyConstraints: false` ajouté pour « faire taire » une erreur.
+- Depuis Git Bash, `kill -INT` n'arrête pas un serveur Node sous Windows : tester les arrêts/redémarrages en PowerShell.
 - Chrome headless ne descend pas sous 500 px de large → tests mobiles via une iframe de 375 px.
 - Exercice « page qui déborde » : une longue URL ne débordait pas (Chrome coupe après les « / ») → cause
   remplacée par `white-space: nowrap` sur le titre. Leçon : toujours vérifier qu'un bug « pédagogique » se produit vraiment.
@@ -59,4 +62,7 @@ back-end, sécurité, méthode « ingénieur Claude »). D'abord local, puis pub
 - Leçon 2.2 (API REST et JSON) rédigée. Exemple : agenda d'événements d'Abidjan. `exercices/m2-02/` : API REST
   complète + page aux 4 états (port 3002), API bugguée à auditer (port 3003, 6 problèmes + plantage sur JSON cassé),
   fichiers de requêtes dont un titre piégé (XSS). Vérifié : codes via curl, 4 états et titre piégé dans Chrome.
-- Ensuite : leçon 2.3 (base de données, `node:sqlite`).
+- Leçon 2.3 (SQLite) rédigée. Exemple : blog (articles + commentaires, brouillons). `exercices/m2-03/` : `blog/`
+  (base.js, serveur.js port 3004, sql.js pour taper du SQL), `blog-bugge/` (port 3005 : injection, clés étrangères
+  désactivées, commentaire orphelin accepté, connexion ouverte à chaque requête). Vérifié avec curl et PowerShell.
+- Ensuite : leçon 2.4 (authentification).

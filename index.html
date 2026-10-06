@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ingénieur Claude · Carnet de route</title>
+    <meta name="description" content="Apprendre à piloter l'IA et à vérifier son travail : front-end, back-end, sécurité et méthode, en français simple." />
+    <link rel="stylesheet" href="assets/style.css" />
+  </head>
+  <body>
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="index.html">Ingénieur <span>Claude</span></a>
+        <small>Carnet de route</small>
+      </div>
+    </header>
+
+    <main class="cadre accueil">
+      <section class="intro">
+        <h1>Piloter l'IA.<br />Vérifier son travail.</h1>
+        <p class="chapeau">
+          Tu n'as pas besoin de tout coder à la main. Tu as besoin de comprendre ce que l'IA construit, de savoir lui
+          demander la bonne chose, et de repérer quand elle se trompe. Ce parcours t'apprend exactement ça, étape par
+          étape.
+        </p>
+
+        <p class="compteur">
+          <strong id="compte-faites">0</strong>
+          <span>/ <span id="compte-total">0</span> leçons terminées</span>
+        </p>
+        <progress id="barre" value="0" max="1">Progression</progress>
+
+        <div id="reprendre"></div>
+
+        <p class="pied">
+          Ta progression est enregistrée dans ce navigateur, sur cet appareil uniquement.
+          <button type="button" class="lien-bouton" id="effacer">Effacer ma progression</button>
+        </p>
+      </section>
+
+      <nav id="route" aria-label="Le parcours, leçon par leçon"></nav>
+    </main>
+
+    <noscript>
+      <p class="cadre">Active JavaScript pour voir le parcours et suivre ta progression.</p>
+    </noscript>
+    <script src="assets/programme.js"></script>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

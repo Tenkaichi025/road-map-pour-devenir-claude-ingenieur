@@ -1,0 +1,132 @@
+<!doctype html>
+<!--
+  MODÈLE DE LEÇON
+  1. Copie ce fichier dans ce même dossier sous le nom <id>.html (ex. m1-02.html).
+  2. Mets le même id dans <body data-lecon="..."> et dans assets/programme.js (avec pret: true).
+  3. Remplace les textes. Garde l'ordre des sections : c'est la structure de toutes les leçons.
+  Astuce code : dans un bloc <pre><code>, écris &lt; à la place de < et &amp; à la place de &.
+-->
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Titre de la leçon · Ingénieur Claude</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+  </head>
+  <body data-lecon="modele">
+    <header class="site-tete">
+      <div class="cadre">
+        <a class="marque" href="../index.html">Ingénieur <span>Claude</span></a>
+        <small><a href="../index.html">Le parcours</a></small>
+      </div>
+    </header>
+
+    <div class="cadre page-lecon">
+      <aside id="rail" aria-label="Ta position dans le module"></aside>
+
+      <main class="lecon">
+        <header class="lecon-tete">
+          <p class="etiquette" id="etiquette">Modèle de leçon</p>
+          <h1>Titre de la leçon</h1>
+        </header>
+
+        <section class="bloc" id="idee">
+          <h2>L'idée</h2>
+          <p>Trois à cinq phrases simples. Ce que c'est, et pourquoi ça compte quand tu travailles avec l'IA.</p>
+        </section>
+
+        <section class="bloc" id="exemple">
+          <h2>Exemple concret</h2>
+          <p>Un exemple tiré d'un projet réaliste (différent à chaque leçon).</p>
+          <pre><code>&lt;p&gt;Du code d'exemple&lt;/p&gt;</code></pre>
+        </section>
+
+        <section class="bloc" id="video-bloc">
+          <h2>Vidéo</h2>
+          <!-- Mets l'identifiant YouTube (la partie après v= dans l'adresse) dans data-youtube. Vide = message « bientôt ». -->
+          <div class="video" data-youtube=""></div>
+        </section>
+
+        <section class="bloc" id="verifier">
+          <h2>Vérifier le travail de l'IA</h2>
+          <p>Ce que tu contrôles quand l'IA a produit ce genre de code :</p>
+          <ul class="liste-verif">
+            <li>Un point de contrôle concret, que tu peux vérifier toi-même.</li>
+            <li>Un autre point de contrôle.</li>
+          </ul>
+        </section>
+
+        <section class="bloc" id="resume-bloc">
+          <h2>À retenir</h2>
+          <ol class="resume">
+            <li>Première idée essentielle, en une phrase.</li>
+            <li>Deuxième idée essentielle.</li>
+            <li>Troisième idée essentielle.</li>
+          </ol>
+        </section>
+
+        <section class="bloc" id="exercices">
+          <h2>Exercices</h2>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 1 · guidé</span>
+            <h3>Titre de l'exercice</h3>
+            <p>L'énoncé, étape par étape.</p>
+            <p class="attendu"><strong>Résultat attendu :</strong> ce que tu dois obtenir.</p>
+            <details>
+              <summary>Indices</summary>
+              <p>Un coup de pouce, sans donner la réponse.</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>La solution expliquée. Ouvre-la seulement après avoir essayé.</p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 2 · semi-guidé</span>
+            <h3>Titre de l'exercice</h3>
+            <p>L'énoncé, avec moins d'étapes données.</p>
+            <p class="attendu"><strong>Résultat attendu :</strong> …</p>
+            <details>
+              <summary>Indices</summary>
+              <p>…</p>
+            </details>
+            <details>
+              <summary>Correction</summary>
+              <p>…</p>
+            </details>
+          </article>
+
+          <article class="exercice">
+            <span class="niveau">Exercice 3 · libre</span>
+            <h3>Titre de l'exercice</h3>
+            <p>Un objectif, à toi de trouver le chemin.</p>
+            <p class="attendu"><strong>Résultat attendu :</strong> …</p>
+            <details>
+              <summary>Pistes</summary>
+              <p>…</p>
+            </details>
+          </article>
+        </section>
+
+        <section class="bloc" id="quiz">
+          <h2>Teste-toi</h2>
+          <!-- data-reponse = position de la bonne réponse (1, 2 ou 3). Change aussi name="q1", "q2", "q3". -->
+          <fieldset class="question" data-reponse="2">
+            <legend>1. La question ?</legend>
+            <label><input type="radio" name="q1" /> Réponse A</label>
+            <label><input type="radio" name="q1" /> Réponse B (la bonne)</label>
+            <label><input type="radio" name="q1" /> Réponse C</label>
+            <p class="explication" hidden>Pourquoi B est la bonne réponse.</p>
+          </fieldset>
+        </section>
+
+        <footer id="fin-lecon"></footer>
+      </main>
+    </div>
+
+    <script src="../assets/programme.js"></script>
+    <script src="../assets/app.js"></script>
+  </body>
+</html>

@@ -56,19 +56,19 @@ exercices/            Fichiers de départ des exercices
 assets/programme.js   L'ordre des modules et des leçons
 assets/app.js         Toute la logique du site
 assets/style.css      Le design
-video/                Fabrication des vidéos (Remotion + ElevenLabs), pas utilisé par le site
+video/                Fabrication des vidéos (Remotion + edge-tts), pas utilisé par le site
 ```
 
 ## Vidéos
 
 Les vidéos sont fabriquées dans `video/` puis hébergées sur YouTube en « non répertorié ». Les fichiers MP4 ne sont
-jamais commités (trop lourds). Les clés API vont dans un fichier `.env` (modèle : `.env.example`), qui est ignoré
-par git.
+jamais commités (trop lourds). Tout est gratuit : la voix vient de edge-tts, sans compte ni clé. Il faut Node.js et
+Python.
 
 ```bash
 cd video
 npm install                               # une seule fois
-npm run voix                              # chercher une voix (gratuit) -> out/voix.html
+python -m pip install edge-tts            # une seule fois
 npm run tts -- m1-01 --essai              # voir le texte envoyé à la voix (gratuit)
 npm run tts -- m1-01 --scene 1            # générer l'audio d'une scène
 npm run studio                            # prévisualiser la vidéo dans le navigateur

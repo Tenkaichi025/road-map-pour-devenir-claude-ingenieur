@@ -3,7 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "voix": "node voix.mjs",
     "tts": "node tts.mjs",
     "studio": "remotion studio src/index.jsx",
     "rendu": "remotion render src/index.jsx"

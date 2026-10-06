@@ -18,7 +18,7 @@ la main. Le site sera public sur GitHub Pages.
 - `exercices/<id>/` : fichiers de départ des exercices. **Beaucoup contiennent des bugs VOLONTAIRES** (décrits dans
   les corrections des leçons, avec numéros de ligne) : ne jamais les corriger, et revérifier les numéros de ligne cités
   si un fichier d'exercice est modifié.
-- `video/` : outillage Remotion + ElevenLabs (pas servi par le site).
+- `video/` : outillage Remotion + edge-tts (pas servi par le site).
 - `.nojekyll` : obligatoire, sinon GitHub Pages ignore les fichiers commençant par `_`.
 
 ## Structure d'une leçon (ordre obligatoire)
@@ -38,10 +38,11 @@ Papier `#F3EFE6`, encre `#1A1A18`, accent unique latérite `#B9431F`. Un seul é
 latérite type métro, stations = leçons). Pas de cartes arrondies, pas de dégradés. Mode sombre via `prefers-color-scheme`.
 
 ## Vidéos
-- Remotion (dans `video/`), voix ElevenLabs Multilingual v2, voix masculine française.
+- **100 % gratuit, aucun service payant** (choix de Wilfried). Voix : edge-tts (Python, sans clé), voix
+  `fr-FR-RemyMultilingualNeural` par défaut (alternative `fr-FR-HenriNeural`). Montage : Remotion + son ffmpeg intégré.
 - Script de narration par leçon dans `video/scripts/<id>.md`, relu par Wilfried AVANT génération. Pauses : `(pause)`, `(longue pause)`.
 - Dictionnaire `video/prononciation.json` appliqué avant l'envoi (API, localStorage, HTTPS…).
-- Clés dans `.env` (ignoré par git) — jamais dans le code ni les commits. Voir `.env.example`.
+- Aucune clé nécessaire. Si un jour une clé est ajoutée : `.env` (déjà ignoré par git), jamais dans le code ni les commits.
 - MP4 jamais commités : hébergés sur YouTube en non répertorié, intégrés via `data-youtube`.
 
 ## Méthode de travail
